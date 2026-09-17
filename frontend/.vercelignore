@@ -1,0 +1,7 @@
+# Vercel CLI: non caricare mai env locali né artefatti (le env vivono nel progetto Vercel)
+.env
+.env.*
+!.env.example
+node_modules
+.next
+tsconfig.tsbuildinfo
