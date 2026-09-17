@@ -73,8 +73,14 @@ export function Pricing({ notes, da, initialPrices }: { notes: Note[]; da: strin
         <h1 className="t-display">Un piano gratis per sempre, un piano Pro. Nessuna sorpresa.</h1>
         {month && year ? (
           <p className="t-corpo measure-voice" data-prices="api">
-            <span className="t-numero-riga">{formatEuro(month.amount_eur)}</span>/mese
-            {noteIva ? <NoteMark note={noteIva} scope="prezzi" /> : null} o <span className="t-numero-riga">{formatEuro(year.amount_eur)}</span>/anno ({formatEuro(year.per_month_eur)} al mese). IVA inclusa. Disdici quando vuoi, rimborso entro 14 giorni{noteRecesso ? <NoteMark note={noteRecesso} scope="prezzi" /> : null}.
+            <span className="nowrap">
+              <span className="t-numero-riga">{formatEuro(month.amount_eur)}</span>/mese
+            </span>
+            {noteIva ? <NoteMark note={noteIva} scope="prezzi" /> : null} o{" "}
+            <span className="nowrap">
+              <span className="t-numero-riga">{formatEuro(year.amount_eur)}</span>/anno
+            </span>{" "}
+            ({formatEuro(year.per_month_eur)} al mese). IVA inclusa. Disdici quando vuoi, rimborso entro 14 giorni{noteRecesso ? <NoteMark note={noteRecesso} scope="prezzi" /> : null}.
           </p>
         ) : pricesLoading ? (
           <p className="t-corpo measure-voice" aria-busy="true" data-prices="loading">

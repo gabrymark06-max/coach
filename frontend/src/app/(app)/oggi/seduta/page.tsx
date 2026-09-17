@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMe, useToday } from "@/lib/hooks/useApi";
 import { useSessionDraft, statusText } from "@/lib/draft/useSessionDraft";
 import { countDone, countTodo, draftStore } from "@/lib/draft/store";
@@ -43,6 +43,8 @@ export default function SedutaPage() {
   const [timer, setTimer] = useState<TimerState | null>(null);
   const [closeAsk, setCloseAsk] = useState(false);
   const [closing, setClosing] = useState(false);
+  // QA R2: due tap nello stesso giro di eventi vedono entrambi `closing === false` (stato React): la guardia vera è il ref.
+  const closeInFlight = useRef(false);
   const [closeError, setCloseError] = useState<string | null>(null);
   const [conflictServer, setConflictServer] = useState<import("@/lib/api/types").Session | null>(null);
   const [firstRir, setFirstRir] = useState(() => typeof window !== "undefined" && !window.localStorage.getItem("fitcoach.rir.seen"));
@@ -85,7 +87,8 @@ export default function SedutaPage() {
   const todo = useMemo(() => (s ? countTodo(s) : 0), [s]);
 
   async function doClose(force = false) {
-    if (closing) return;
+    if (closing || closeInFlight.current) return;
+    closeInFlight.current = true;
     setClosing(true);
     setCloseError(null);
     try {
@@ -112,6 +115,7 @@ export default function SedutaPage() {
     } catch (e) {
       setCloseError(isApiError(e) ? e.detail : "Errore. Riprova.");
     } finally {
+      closeInFlight.current = false;
       setClosing(false);
       setCloseAsk(false);
     }

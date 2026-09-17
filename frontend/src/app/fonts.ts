@@ -19,13 +19,13 @@ export const archivo = localFont({
 // I numeri in riga (`.t-numero-riga`, `.set-input`, `.pill-rir`: 800, wdth 110): istanza statica a parte, 15 kB.
 // Dentro il file variabile il fallback di next/font è calcolato sull'istanza di default (600, wdth 100), l'11 % più
 // stretta: allo swap la riga del prezzo sulla landing si riavvolgeva (QA N3, CLS 0,020). Con l'istanza dedicata il
-// size-adjust è quello dei numeri veri. Niente preload: con le metriche giuste lo swap non muove nulla, e 15 kB in
-// meno davanti all'LCP.
+// size-adjust è quello dei numeri veri. Preload sì (QA R1): su /prezzi il primo paint usava Arial nuda prima ancora
+// del fallback con size-adjust e la riga del prezzo cambiava a-capo (CLS 0,028); 15 kB davanti all'LCP costano meno.
 export const archivoRiga = localFont({
   src: [{ path: "../fonts/Archivo-riga.woff2", style: "normal", weight: "800" }],
   variable: "--font-archivo-riga",
   display: "swap",
-  preload: false,
+  preload: true,
   adjustFontFallback: "Arial",
   fallback: ["Arial Narrow", "Arial", "system-ui", "sans-serif"],
 });
