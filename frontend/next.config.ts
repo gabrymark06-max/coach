@@ -16,8 +16,13 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Il service worker è generato al build (force-static): il browser deve rivalidarlo a ogni controllo, non
+        // tenerlo in cache HTTP (Vercel lo servirebbe con la cache dei file statici).
         source: "/serwist/:path*",
-        headers: [{ key: "Service-Worker-Allowed", value: "/" }],
+        headers: [
+          { key: "Service-Worker-Allowed", value: "/" },
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+        ],
       },
     ];
   },

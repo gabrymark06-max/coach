@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { API_URL } from "@/lib/api/client";
 import type { KnowledgeExercise } from "@/lib/api/types";
+import { SERVER_FETCH_TIMEOUT_MS } from "@/lib/prices";
 
 export const metadata: Metadata = { title: "Crediti", alternates: { canonical: "/crediti" } };
 
 async function getExercises(): Promise<KnowledgeExercise[] | null> {
   try {
-    const res = await fetch(`${API_URL}/knowledge/exercises`, { next: { revalidate: 3600 } });
+    const res = await fetch(`${API_URL}/knowledge/exercises`, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS) });
     if (!res.ok) return null;
     return (await res.json()) as KnowledgeExercise[];
   } catch {

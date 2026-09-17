@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import AliasChoices, Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -16,7 +16,9 @@ class Settings(BaseSettings):
     app_name: str = "fitcoach"
     support_email: str = "supporto@fitcoach.example"
     frontend_url: str = "http://localhost:3000"
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    # NoDecode: come variabile d'ambiente vera (Render, Railway) è "https://a,https://b", non JSON. Senza questo
+    # pydantic-settings prova json.loads prima del validatore e il processo non parte (emerso nella prova di deploy).
+    cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:3000"])
     # Il fuso in cui si decide "oggi" (piano, sedute, costanza, job) e il reset della quota chat.
     # TIMEZONE è il nome; QUOTA_TIMEZONE resta accettato per i .env già scritti.
     timezone: str = Field(default="Europe/Rome", validation_alias=AliasChoices("TIMEZONE", "QUOTA_TIMEZONE"))

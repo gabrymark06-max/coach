@@ -3,11 +3,16 @@ import { API_URL } from "@/lib/api/client";
 import type { Price, Prices } from "@/lib/api/types";
 import { formatEuro } from "@/lib/format";
 
+/** Timeout delle fetch lato server verso l'API (prezzi, note, esercizi). */
+export const SERVER_FETCH_TIMEOUT_MS = 8000;
+
 /** Lato server (landing SSG, prezzi, termini): cache 60 s come /founders; se l'API non risponde torna null e la pagina
  * dice che il prezzo è nella pagina Prezzi, mai un numero inventato. */
 export async function getPrices(): Promise<Prices | null> {
   try {
-    const res = await fetch(`${API_URL}/billing/prices`, { next: { revalidate: 60 } });
+    // Timeout (deploy): se il backend dorme (Render free si sveglia in ~30-60 s) la pagina non resta appesa: torna null,
+    // la UI mostra lo stato di errore con "Riprova" e la fetch client riparte quando l'API risponde.
+    const res = await fetch(`${API_URL}/billing/prices`, { next: { revalidate: 60 }, signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS) });
     if (!res.ok) return null;
     return (await res.json()) as Prices;
   } catch {

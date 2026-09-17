@@ -1,0 +1,57 @@
+# Blueprint Render per il backend fitcoach (docs/deploy.md).
+# Il database NON è qui: Render Postgres free scade a 30 giorni e non ha backup (docs/verifica.md #24); il DB è Neon,
+# e DATABASE_URL si incolla a mano al primo deploy (sync: false).
+#
+# Vincoli letti dal codice:
+# - 1 solo worker uvicorn: il rate limiting è in memoria (verifica #30).
+# - Migrazioni prima del codice nuovo: sul piano free Render non ha preDeployCommand, quindi `alembic upgrade head`
+#   sta nello startCommand (1 replica: nessuna gara). Passando a un piano a pagamento spostarlo in preDeployCommand.
+# - pgserver (Postgres embedded di dev/test) è nel gruppo dev: `uv sync --no-dev` non lo installa.
+services:
+  - type: web
+    name: fitcoach-api
+    runtime: python
+    plan: free
+    region: frankfurt
+    rootDir: backend
+    autoDeployTrigger: commit
+    buildCommand: pip install -U uv && uv sync --frozen --no-dev
+    startCommand: .venv/bin/python -m alembic upgrade head && .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.14"
+      - key: APP_ENV
+        value: prod
+      - key: APP_NAME
+        value: fitcoach
+      - key: TIMEZONE
+        value: Europe/Rome
+      # --- da impostare a mano al primo deploy (sync: false = Render li chiede nella dashboard) ---
+      - key: DATABASE_URL          # segreto · stringa Neon: postgresql://...neon.tech/neondb?sslmode=require
+        sync: false
+      - key: FRONTEND_URL          # https://<progetto>.vercel.app (link nelle email e nei redirect Stripe)
+        sync: false
+      - key: CORS_ORIGINS          # https://<progetto>.vercel.app  (allowlist, separata da virgole, senza slash finale)
+        sync: false
+      - key: SUPPORT_EMAIL         # email di supporto mostrata dal prodotto
+        sync: false
+      - key: CROSSREF_MAILTO       # email per il polite pool Crossref (serve solo al seed, ma la Settings la legge)
+        sync: false
+      # --- generato da Render (256 bit, base64) ---
+      - key: JWT_SECRET            # segreto
+        generateValue: true
+      # --- provider spenti finché non ci sono le chiavi (decisione: online senza chiavi) ---
+      - key: LLM_PROVIDER
+        value: fake
+      - key: EMBEDDING_PROVIDER
+        value: fake
+      - key: EMAIL_PROVIDER
+        value: fake
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      - key: MISSED_SESSION_JOB_ENABLED
+        value: "true"
+      # Stripe: vuoti => 503 billing_unavailable onesto. Quando si attiva: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
+      # STRIPE_PRICE_MONTH, STRIPE_PRICE_YEAR, STRIPE_PRICE_YEAR_FOUNDERS, STRIPE_FOUNDERS_PROMO_CODE_ID (tutti segreti
+      # tranne i price id) e il webhook puntato a https://<api>/billing/webhook.

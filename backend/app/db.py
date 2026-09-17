@@ -33,14 +33,35 @@ def resolve_database_url(settings: Settings) -> str:
     return to_async_url(uri)
 
 
+# Parametri libpq che asyncpg non accetta come kwarg (SQLAlchemy passa la query string a `asyncpg.connect`):
+# `sslmode` diventa `ssl` (asyncpg lo capisce con gli stessi valori), gli altri si tolgono. Senza questo un URL
+# di Neon/Render (`?sslmode=require&channel_binding=require`) fallisce con TypeError prima ancora di connettersi.
+_SSL_KEYS = {"sslmode": "ssl"}
+_DROP_KEYS = {"channel_binding", "options", "application_name", "connect_timeout", "sslrootcert"}
+
+
 def to_async_url(url: str) -> str:
-    if url.startswith("postgresql+asyncpg://"):
+    for prefix in ("postgresql+asyncpg://", "postgresql://", "postgres://"):
+        if url.startswith(prefix):
+            url = "postgresql+asyncpg://" + url[len(prefix) :]
+            break
+    else:
         return url
-    if url.startswith("postgresql://"):
-        return "postgresql+asyncpg://" + url[len("postgresql://") :]
-    if url.startswith("postgres://"):
-        return "postgresql+asyncpg://" + url[len("postgres://") :]
-    return url
+    return _normalize_query(url)
+
+
+def _normalize_query(url: str) -> str:
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    if not parts.query:
+        return url
+    query = []
+    for k, v in parse_qsl(parts.query, keep_blank_values=True):
+        if k in _DROP_KEYS:
+            continue
+        query.append((_SSL_KEYS.get(k, k), v))
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
 def to_sync_url(url: str) -> str:

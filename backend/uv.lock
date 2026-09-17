@@ -488,7 +488,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "openai" },
-    { name = "pgserver" },
     { name = "pgvector" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -505,6 +504,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "pgserver" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
 ]
@@ -519,7 +519,6 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.141,<0.142" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "openai", specifier = ">=1.60" },
-    { name = "pgserver", specifier = ">=0.1.4" },
     { name = "pgvector", specifier = ">=0.5.0,<0.6" },
     { name = "pydantic", specifier = ">=2.10" },
     { name = "pydantic-settings", specifier = ">=2.6" },
@@ -536,6 +535,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "pgserver", specifier = ">=0.1.4" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-asyncio", specifier = ">=0.25" },
 ]

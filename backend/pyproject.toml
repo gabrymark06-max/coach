@@ -23,7 +23,6 @@ dependencies = [
     "structlog>=24.4",
     "pyyaml>=6.0",
     "sse-starlette>=2.2",
-    "pgserver>=0.1.4",
     "tzdata>=2026.4",
 ]
 
@@ -31,6 +30,8 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.25",
+    # Postgres embedded per dev/test: in produzione DATABASE_URL è esterno e questo non si installa (uv sync --no-dev)
+    "pgserver>=0.1.4",
 ]
 
 [tool.pytest.ini_options]
