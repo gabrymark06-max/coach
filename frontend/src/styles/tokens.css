@@ -1,0 +1,164 @@
+/* fitcoach — token (design-system §1). L'unico file che dichiara colori e misure. */
+:root {
+  color-scheme: light;
+
+  /* 1.1 Colore */
+  --paper: #f4f4f1;
+  --surface: #ffffff;
+  --ink: #17181a;
+  --text-muted: #5c5f63;
+  --rule: #d9dad5;
+  --highlight: #ffdd57;
+  --danger: #b3261e;
+  --scrim: rgb(23 24 26 / 0.48);
+  --on-ink: #ffffff;
+  --on-danger: #ffffff;
+
+  /* 1.2 Tipografia — famiglie (le variabili --font-archivo / --font-newsreader sono di next/font/local) */
+  --font-ui: var(--font-archivo), "Arial Narrow", Arial, system-ui, sans-serif;
+  /* i numeri in riga (800, wdth 110) sono un'istanza statica a parte: il fallback ha le metriche giuste (QA N3) */
+  --font-ui-numero-riga: var(--font-archivo-riga), "Arial Narrow", Arial, system-ui, sans-serif;
+  --font-voice: var(--font-newsreader), Georgia, "Times New Roman", serif;
+  /* I corsivi sono famiglie a parte (non in preload): le classi .t-voce em / .t-nota em li chiamano per nome. */
+  --font-voice-italic: var(--font-newsreader-italic), Georgia, "Times New Roman", serif;
+  /* La nota è Newsreader a opsz 10 (--opsz-nota) servita come istanza dedicata: stessa faccia, metriche di fallback esatte. */
+  --font-nota: var(--font-newsreader-nota), Georgia, "Times New Roman", serif;
+  --font-nota-italic: var(--font-newsreader-nota-italic), Georgia, "Times New Roman", serif;
+
+  /* Scala scrivania (default) */
+  --fs-numero: 56px;
+  --fs-numero-riga: 24px;
+  --fs-titolo: 30px;
+  --fs-voce: 18px;
+  --fs-corpo: 16px;
+  --fs-nota: 14px;
+  --fs-etichetta: 12px;
+  /* La tabella §1.2 dice 40 @375 · 52 @768 · 64 @1440; la formula del documento (2.5rem + 3vw) dava 51 @375. Vince la tabella. */
+  --fs-display: clamp(40px, 31.5px + 2.25vw, 64px);
+  --lh-numero: 1;
+  --lh-titolo: 1.15;
+  --lh-voce: 1.55;
+  --lh-corpo: 1.5;
+  --lh-nota: 1.45;
+  --lh-etichetta: 1.2;
+  --ls-titolo: -0.01em;
+  --ls-etichetta: 0.08em;
+  --ls-display: -0.02em;
+  --wdth-numero: 125;
+  --wdth-numero-riga: 110;
+  --wdth-ui: 100;
+  --opsz-nota: 10;
+  --measure-voice: 62ch;
+  --measure-ui: 72ch;
+
+  /* 1.3 Spazio (base 4) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* Misure fisse */
+  --target: 44px;
+  --target-gym: 56px;
+  --gap-target: var(--space-2);
+  --nav-h: 64px;
+  --rail-w: 200px;
+  --chat-w: 400px;
+  --panel-w: 400px;
+  --timer-h: 160px;
+  --container-lg: 1120px;
+  --container-app: 1360px;
+  --input-h: 48px;
+  --sticky-h: 48px;
+  --header-h: 56px;
+  --form-w: 480px;
+  --session-col-w: 480px;
+  --content-md-w: 560px;
+  --toast-w: 480px;
+  --dialog-w: 480px;
+  --cell-min-w: 180px;
+  --cell-min-h: 96px;
+  --dot-cell: 32px;
+  --dot-cell-lg: 40px;
+  --dot-rest: 6px;
+  --checkbox: 24px;
+  --glyph: 24px;
+  --apice-min-w: 18px;
+  --apice-h: 18px;
+  --apice-lh: 16px;
+  --apice-inset-y: -13px;
+  --apice-inset-x: -7px;
+  --pill-h: 20px;
+  --pill-lh: 16px;
+  --pill-pad-y: 2px;
+  --progress-seg-h: 3px;
+  --chart-h: 220px;
+  --set-col-prev: 64px;
+  --set-col-weight: 84px;
+  --set-col-reps: 76px;
+  --set-col-check: 56px;
+  --set-col-n: 20px;
+  --sheet-max-h: 80dvh;
+  --coach-rule-w: var(--space-16);
+
+  /* 1.4 Raggi e bordi */
+  --radius-0: 0;
+  --radius-full: 999px;
+  --border-1: 1px;
+  --border-2: 2px;
+  --border-3: 3px;
+  --shadow: none;
+
+  /* 1.5 Movimento */
+  --dur-1: 150ms;
+  --dur-2: 200ms;
+  --dur-3: 300ms;
+  --stagger: 40ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* 1.6 Z-index */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-timer: 20;
+  --z-nav: 30;
+  --z-scrim: 40;
+  --z-sheet: 41;
+  --z-toast: 50;
+  --z-dialog: 60;
+
+  /* 1.7 Breakpoint (documentali: le media query usano i valori in px) */
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1440px;
+}
+
+/* D4: scala palestra per schermata, non per viewport */
+[data-scale="palestra"] {
+  --fs-numero: 60px;
+  --fs-numero-riga: 28px;
+  --fs-titolo: 28px;
+  --fs-voce: 19px;
+  --fs-corpo: 17px;
+  --fs-nota: 15px;
+  --fs-etichetta: 13px;
+  --input-h: 56px;
+}
+
+/* §7: un solo punto, nessun if in JS */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 0ms;
+    --dur-2: 0ms;
+    --dur-3: 0ms;
+    --stagger: 0ms;
+  }
+}

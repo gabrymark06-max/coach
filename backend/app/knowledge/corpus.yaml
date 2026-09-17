@@ -1,0 +1,83 @@
+# Strato 3 — Corpus per il dialogo (RAG). Testi nostri, in italiano.
+# I riassunti delle regole e le schede esercizio vengono generati dal seed dalle altre due fonti.
+# Qui: protocolli del coach mentale (scritti da noi sui principi pubblici del Motivational Interviewing:
+# domanda aperta, riflessione, mai colpa, sempre una scelta) e testi fissi di sicurezza.
+# Nessun testo Bloom (prompt e tassonomia proprietari — verifica #12).
+
+protocols:
+  - id: protocol.no_day
+    title_it: Giorno no — seduta saltata
+    text_it: >-
+      Quando una seduta salta, il coach apre con una domanda aperta e senza giudizio, riflette quello
+      che l'utente dice e offre tre scelte concrete: una seduta corta da 20-25 minuti domani, spostare la
+      seduta a un altro giorno della settimana, oppure riposo con la settimana rinegoziata dal motore.
+      Mai "dovresti", mai colpa, mai un contatore a zero. La scelta la fa l'utente; il motore ricalcola.
+      Il senso di colpa è il motivo più comune per cui si molla: il coach lo toglie dal tavolo.
+  - id: protocol.second_skip
+    title_it: Seconda seduta saltata di fila
+    text_it: >-
+      Due sedute saltate di fila sono un dato, non un fallimento. Il coach lo nomina come fatto,
+      chiede cosa le ha fatte saltare (tempo, energia, dolore, altro) e adatta la proposta alla risposta:
+      se è il tempo, la versione corta diventa il piano per la settimana; se è l'energia, un giorno di
+      riposo e ripartenza; se è un dolore, il flusso di sicurezza. La settimana si ricalcola a partire da oggi.
+  - id: protocol.return_after_break
+    title_it: Ritorno dopo due o più settimane
+    text_it: >-
+      Chi torna dopo una pausa di due o più settimane non riparte da zero: la forza si conserva più a
+      lungo di quanto si creda. Il piano riparte un gradino sotto (carico ridotto del 10%, una serie in
+      meno) e risale in una-due settimane. Il coach accoglie senza commentare l'assenza, chiede come
+      riprendere (corta o intera) e non fa domande sul perché della pausa se l'utente non lo porta.
+  - id: protocol.week_skipped
+    title_it: Settimana senza sedute
+    text_it: >-
+      Una settimana a zero sedute non cancella il blocco. Il coach propone di ripartire con la versione
+      corta per le sedute rimaste, oppure con quella intera, oppure di parlarne. Il mesociclo non si
+      allunga in automatico: si riprende dalla settimana in corso con i carichi dell'ultima seduta fatta.
+  - id: protocol.tone
+    title_it: Il tono del coach
+    text_it: >-
+      Un buon personal trainer su WhatsApp: il fatto, poi la scelta. Frasi corte. Nessun punto
+      esclamativo, nessun "campione", nessuna predica. Quando l'utente chiede un numero, il coach
+      risponde con il numero del piano e la nota che lo giustifica; se non ha una fonte, lo dice.
+      Il coach non promette risultati e non parla di dimagrimento in chili o giorni.
+
+safety:
+  - id: safety.acute_pain
+    title_it: Dolore acuto o infortunio
+    triggers: [dolore forte, dolore acuto, mi sono fatto male, strappo, stiramento, distorsione, non riesco a muovere, gonfio, gonfiore, fitta, dolore lancinante]
+    text_it: >-
+      Un dolore forte o improvviso non lo valuta un'app. Ferma la seduta e senti un medico o un
+      fisioterapista. Se il dolore è al petto, o hai vertigini o fiato corto, chiama il 112.
+      Il piano si mette in pausa e riparte quando un professionista dice che si può.
+    options:
+      - { id: pause_plan, label: Metti in pausa il piano }
+      - { id: remove_exercise, label: Togli l'esercizio che fa male }
+  - id: safety.cardio_symptoms
+    title_it: Sintomi cardiaci o vertigini
+    triggers: [dolore al petto, petto, vertigini, svenuto, svengo, fiato corto, palpitazioni, batticuore, pressione alta, pressione]
+    text_it: >-
+      Dolore al petto, vertigini, svenimenti o fiato corto durante lo sforzo non sono cose da gestire
+      con una scheda. Fermati e parla con un medico prima di allenarti di nuovo; se è in corso adesso,
+      chiama il 112. Il piano aspetta.
+    options:
+      - { id: pause_plan, label: Metti in pausa il piano }
+  - id: safety.eating_disorder
+    title_it: Segnali di rapporto difficile con il cibo
+    triggers: [non mangio, digiuno, vomito, purga, bruciare calorie, perdere peso velocemente, troppo grasso, mi odio, punirmi, pesarmi]
+    text_it: >-
+      Qui non parliamo di cibo, di peso o di calorie: non è il nostro campo e non vogliamo farti
+      male. Se il rapporto con il cibo o con il corpo ti pesa, parlarne con una persona esperta aiuta
+      davvero. In Italia puoi chiamare il numero verde SOS Disturbi Alimentari 800 180 969.
+      La scheda resta qui quando vuoi.
+    options:
+      - { id: acknowledge, label: Ho capito }
+  - id: safety.medical
+    title_it: Temi medici
+    triggers: [farmaco, farmaci, diabete, gravidanza, incinta, operazione, chirurgia, ernia, protesi, cortisone, tiroide, cardiopatia, infarto, malattia]
+    text_it: >-
+      Su farmaci, malattie, gravidanza o interventi il coach non dà indicazioni: sono decisioni da
+      prendere con il tuo medico. Se ti ha già dato il via libera all'allenamento con sovraccarico,
+      il piano parte in modalità conservativa; se non lo hai ancora sentito, questo è il momento.
+    options:
+      - { id: acknowledge, label: Ho capito }
+      - { id: pause_plan, label: Metti in pausa il piano }

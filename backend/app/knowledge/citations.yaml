@@ -1,0 +1,179 @@
+# Strato 2 — Citazioni. I 22 DOI risolti dal ricercatore su Crossref il 2026-09-16 (verifica.md #11).
+# Il seed NON inserisce nulla senza aver ri-verificato ogni DOI via Crossref (titolo e anno ±1).
+# `type`: meta_analysis | rct | review | consensus | preprint | position_stand
+- id: cit_0001
+  doi: 10.1080/02640414.2016.1210197
+  authors: Schoenfeld BJ, Ogborn D, Krieger JW
+  year: 2017
+  title: "Dose-response relationship between weekly resistance training volume and increases in muscle mass: A systematic review and meta-analysis"
+  journal: Journal of Sports Sciences
+  type: meta_analysis
+  open_access: false
+- id: cit_0002
+  doi: 10.1007/s40279-017-0762-7
+  authors: Ralston GW, Kilgore L, Wyatt FB, Baker JS
+  year: 2017
+  title: "The Effect of Weekly Set Volume on Strength Gain: A Meta-Analysis"
+  journal: Sports Medicine
+  type: meta_analysis
+  open_access: true
+- id: cit_0003
+  doi: 10.2478/hukin-2022-0017
+  authors: Baz-Valle E, Balsalobre-Fernández C, Alix-Fages C, Santos-Concejero J
+  year: 2022
+  title: "A Systematic Review of The Effects of Different Resistance Training Volumes on Muscle Hypertrophy"
+  journal: Journal of Human Kinetics
+  type: review
+  open_access: true
+- id: cit_0004
+  doi: 10.51224/srxiv.460
+  authors: Pelland JC, Remmert JF, Robinson Z, Hinson S, Zourdos MC
+  year: 2024
+  title: "The Resistance Training Dose-Response: Meta-Regressions Exploring the Effects of Weekly Volume and Frequency on Muscle Hypertrophy and Strength Gain"
+  journal: SportRxiv
+  type: preprint
+  open_access: true
+- id: cit_0005
+  doi: 10.1007/s40279-016-0543-8
+  authors: Schoenfeld BJ, Ogborn D, Krieger JW
+  year: 2016
+  title: "Effects of Resistance Training Frequency on Measures of Muscle Hypertrophy: A Systematic Review and Meta-Analysis"
+  journal: Sports Medicine
+  type: meta_analysis
+  open_access: false
+- id: cit_0006
+  doi: 10.1007/s40279-018-0872-x
+  authors: Grgic J, Schoenfeld BJ, Davies TB, Lazinica B, Krieger JW, Pedisic Z
+  year: 2018
+  title: "Effect of Resistance Training Frequency on Gains in Muscular Strength: A Systematic Review and Meta-Analysis"
+  journal: Sports Medicine
+  type: meta_analysis
+  open_access: false
+- id: cit_0007
+  doi: 10.1519/JSC.0000000000002200
+  authors: Schoenfeld BJ, Grgic J, Ogborn D, Krieger JW
+  year: 2017
+  title: "Strength and Hypertrophy Adaptations Between Low- vs. High-Load Resistance Training: A Systematic Review and Meta-analysis"
+  journal: Journal of Strength and Conditioning Research
+  type: meta_analysis
+  open_access: false
+- id: cit_0008
+  doi: 10.3390/sports9020032
+  authors: Schoenfeld BJ, Grgic J, Van Every DW, Plotkin DL
+  year: 2021
+  title: "Loading Recommendations for Muscle Strength, Hypertrophy, and Local Endurance: A Re-Examination of the Repetition Continuum"
+  journal: Sports
+  type: review
+  open_access: true
+- id: cit_0009
+  doi: 10.1249/mss.0000000000002838
+  authors: Lopez P, Radaelli R, Taaffe DR, et al.
+  year: 2022
+  title: "Resistance Training Load Effects on Muscle Hypertrophy and Strength Gain: Systematic Review and Network Meta-analysis"
+  journal: Medicine & Science in Sports & Exercise
+  type: meta_analysis
+  open_access: false
+- id: cit_0010
+  doi: 10.1136/bjsports-2023-106807
+  authors: Currier BS, Mcleod JC, Banfield L, et al.
+  year: 2023
+  title: "Resistance training prescription for muscle strength and hypertrophy in healthy adults: a systematic review and Bayesian network meta-analysis"
+  journal: British Journal of Sports Medicine
+  type: meta_analysis
+  open_access: true
+- id: cit_0011
+  doi: 10.1016/j.jshs.2021.01.007
+  authors: Grgic J, Schoenfeld BJ, Orazem J, Sabol F
+  year: 2022
+  title: "Effects of resistance training performed to repetition failure or non-failure on muscular strength and hypertrophy: A systematic review and meta-analysis"
+  journal: Journal of Sport and Health Science
+  type: meta_analysis
+  open_access: false
+- id: cit_0012
+  doi: 10.1007/s40279-022-01784-y
+  authors: Refalo MC, Helms ER, Trexler ET, Hamilton DL, Fyfe JJ
+  year: 2023
+  title: "Influence of Resistance Training Proximity-to-Failure on Skeletal Muscle Hypertrophy: A Systematic Review with Meta-analysis"
+  journal: Sports Medicine
+  type: meta_analysis
+  open_access: true
+- id: cit_0013
+  doi: 10.1007/s40279-024-02069-2
+  authors: Robinson ZP, Pelland JC, Remmert JF, et al.
+  year: 2024
+  title: "Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions"
+  journal: Sports Medicine
+  type: meta_analysis
+  open_access: false
+- id: cit_0014
+  doi: 10.1007/s40279-017-0788-x
+  authors: Grgic J, Schoenfeld BJ, Skrepnik M, Davies TB, Mikulic P
+  year: 2018
+  title: "Effects of Rest Interval Duration in Resistance Training on Measures of Muscular Strength: A Systematic Review"
+  journal: Sports Medicine
+  type: review
+  open_access: false
+- id: cit_0015
+  doi: 10.1519/JSC.0000000000001272
+  authors: Schoenfeld BJ, Pope ZK, Benik FM, et al.
+  year: 2016
+  title: "Longer Interset Rest Periods Enhance Muscle Strength and Hypertrophy in Resistance-Trained Men"
+  journal: Journal of Strength and Conditioning Research
+  type: rct
+  open_access: false
+- id: cit_0016
+  doi: 10.1007/s40279-017-0734-y
+  authors: Williams TD, Tolusso DV, Fedewa MV, Esco MR
+  year: 2017
+  title: "Comparison of Periodized and Non-Periodized Resistance Training on Maximal Strength: A Meta-Analysis"
+  journal: Sports Medicine
+  type: meta_analysis
+  open_access: false
+- id: cit_0017
+  doi: 10.1007/s40279-021-01636-1
+  authors: Moesgaard L, Beck MM, Christiansen L, Aagaard P, Lundbye-Jensen J
+  year: 2022
+  title: "Effects of Periodization on Strength and Muscle Hypertrophy in Volume-Equated Resistance Training Programs: A Systematic Review and Meta-analysis"
+  journal: Sports Medicine
+  type: meta_analysis
+  open_access: false
+- id: cit_0018
+  doi: 10.1186/s40798-021-00404-9
+  authors: Hickmott LM, Chilibeck PD, Shaw KA, Butcher SJ
+  year: 2022
+  title: "The Effect of Load and Volume Autoregulation on Muscular Strength and Hypertrophy: A Systematic Review and Meta-Analysis"
+  journal: Sports Medicine - Open
+  type: meta_analysis
+  open_access: true
+- id: cit_0019
+  doi: 10.1186/s40798-023-00633-0
+  authors: Bell L, Nolan D, Immonen V, et al.
+  year: 2023
+  title: "Integrating Deloading into Strength and Physique Sports Training Programmes: An International Delphi Consensus Approach"
+  journal: Sports Medicine - Open
+  type: consensus
+  open_access: true
+- id: cit_0020
+  doi: 10.7717/peerj.16777
+  authors: Coleman M, Burke R, Benavente C, et al.
+  year: 2024
+  title: "Gaining more from doing less? The effects of a one-week deload period during supervised resistance training on muscular adaptations"
+  journal: PeerJ
+  type: rct
+  open_access: true
+- id: cit_0021
+  doi: 10.1249/MSS.0b013e3181915670
+  authors: American College of Sports Medicine
+  year: 2009
+  title: "Progression Models in Resistance Training for Healthy Adults"
+  journal: Medicine & Science in Sports & Exercise
+  type: position_stand
+  open_access: false
+- id: cit_0022
+  doi: 10.1519/jsc.0000000000003230
+  authors: Fragala MS, Cadore EL, Dorgo S, et al.
+  year: 2019
+  title: "Resistance Training for Older Adults: Position Statement From the National Strength and Conditioning Association"
+  journal: Journal of Strength and Conditioning Research
+  type: position_stand
+  open_access: false

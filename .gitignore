@@ -1,0 +1,26 @@
+# Python (backend/)
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.pgdata/
+
+# Node (frontend/)
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+public/sw.js
+
+# Env: solo .env.example è versionato
+.env
+.env.*
+!.env.example
+
+# Vercel / Render link locali
+.vercel/
+
+# OS / editor
+.DS_Store
+Thumbs.db
