@@ -58,15 +58,24 @@ app/
   jobs/              email di mancata seduta
 alembic/             migrazioni
 scripts/seed.py      seed con validatore DOI (fallisce senza rete: nessun DOI non verificato entra)
-tests/               108 test (motore, conoscenza, auth, piano, seduta, billing, chat, account)
+tests/               164 test (motore, conoscenza, auth, piano, seduta, billing, chat, account)
 ```
 
 ## Produzione
 
-- `APP_ENV=prod`, `DATABASE_URL` (Postgres con `CREATE EXTENSION vector`), `JWT_SECRET` vero, `CORS_ORIGINS` con il dominio del frontend.
+Il piano completo, con la lista di cosa serve e i comandi in ordine, è in [`../docs/deploy.md`](../docs/deploy.md).
+In breve: **Render** (web service free, Frankfurt, `../render.yaml`) + **Neon** (Postgres con pgvector) + **Vercel** per il frontend.
+
+- `APP_ENV=prod`, `DATABASE_URL` (Neon, connessione diretta: `?sslmode=require` viene tradotto per asyncpg), `JWT_SECRET` vero,
+  `CORS_ORIGINS` con il dominio del frontend (virgole, niente slash finale). Senza `DATABASE_URL` o con il `JWT_SECRET` di dev
+  il processo **non parte** (`app/config.py`).
 - Un solo worker uvicorn per replica finché il rate limiting resta in memoria (verifica #30).
+- `GET /health` (liveness, senza DB) per l'hosting; `GET /health/db` (`SELECT 1`) per il monitoraggio a bassa frequenza.
 - Webhook Stripe su `POST /billing/webhook` con `STRIPE_WEBHOOK_SECRET`; prezzi con `tax_behavior=inclusive` e Stripe Tax attivo.
-- `python -m alembic upgrade head` e `python -m scripts.seed` a ogni deploy (il seed è idempotente: upsert).
+  Senza `STRIPE_SECRET_KEY` il gateway è spento: 503 `billing_unavailable`, mai 500.
+- `python -m alembic upgrade head` a ogni deploy (è nello `startCommand` di Render); `python -m scripts.seed` dal PC contro il
+  DB di produzione quando cambia la base di conoscenza (idempotente: upsert). `pgserver` è una dipendenza di sviluppo:
+  `uv sync --no-dev` non lo installa.
 
 ## Crediti e licenze
 

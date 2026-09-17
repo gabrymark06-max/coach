@@ -1,4 +1,4 @@
-"""GET /health: pubblico, senza rate limit, 200 con il DB su."""
+"""GET /health (liveness, senza DB) e GET /health/db (readiness): pubblici, senza rate limit."""
 
 from __future__ import annotations
 
@@ -9,15 +9,26 @@ async def test_health_ok(client):
     r = await client.get("/health")
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["status"] == "ok" and body["db"] == "ok" and body["version"]
+    assert body["status"] == "ok" and body["version"] and "db" not in body
     # header di sicurezza anche qui (middleware ASGI più esterno)
     assert r.headers["x-content-type-options"] == "nosniff"
+
+
+async def test_health_db_ok(client):
+    r = await client.get("/health/db")
+    assert r.status_code == 200, r.text
+    assert r.json()["db"] == "ok"
 
 
 async def test_health_not_rate_limited(client):
     # 120/min di default per IP: 130 richieste devono passare tutte
     for _ in range(130):
         assert (await client.get("/health")).status_code == 200
+
+
+async def test_health_not_in_openapi(client):
+    paths = (await client.get("/openapi.json")).json()["paths"]
+    assert "/health" not in paths and "/health/db" not in paths
 
 
 def test_to_async_url_translates_libpq_params():

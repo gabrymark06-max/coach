@@ -72,5 +72,8 @@ src/
 
 ## Deploy (Vercel)
 
-Variabili: `NEXT_PUBLIC_API_URL` (URL pubblico del backend), `NEXT_PUBLIC_SITE_URL` (dominio del sito, per sitemap e
-OG). Build: `pnpm build`. Nessun segreto nel client.
+Passi e verifica in [`../docs/deploy.md`](../docs/deploy.md). Variabili (Production e Preview): `NEXT_PUBLIC_API_URL` (URL
+pubblico del backend), `NEXT_PUBLIC_SITE_URL` (dominio del sito, per sitemap, OG e canonical), `ENABLE_EXPERIMENTAL_COREPACK=1`
+(usa `pnpm@11.7.0` da `packageManager`). Se il progetto è collegato al repo Git: Root Directory = `frontend`. Build: `pnpm build`.
+Nessun segreto nel client. L'origine dell'API è cotta dentro `sw.js` al build: cambiarla richiede un nuovo deploy.
+`/serwist/*` esce con `Cache-Control: public, max-age=0, must-revalidate`, così il browser rivaluta il service worker a ogni controllo.
