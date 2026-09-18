@@ -1,5 +1,146 @@
 # fitcoach — Rapporto QA
 
+## Verifica in produzione — 2026-09-18
+
+**Che cosa è stato verificato:** non un audit nuovo, ma la produzione appena pubblicata. Frontend `https://fitcoach-three-xi.vercel.app` (Vercel), API `https://fitcoach-api-208b.onrender.com` (Render free), DB Neon con il seed reale. Playwright + Edge (`channel: "msedge"`) contro gli URL pubblici, timeout a 90 s per il risveglio di Render, viewport 375 / 768 / 1440. Nessun server locale acceso: ogni numero qui sotto viene dalla rete vera. Script nello scratchpad: `prod-common.js`, `prod-flow.js`, `prod-flowb.js`, `prod-n1.js`, `prod-pwa.js`, `prod-axe.js`, `prod-kbd*.js`, `prod-vitals.js`, `prod-edge.js`, `prod-cold.js`, `prod-coldreal.sh`, `prod-422.js`, `prod-composer.js`, `prod-dbl*.js`, `prod-procard.js`, `prod-rir.js`; screenshot in `prod-shots/`.
+
+### Verdetto
+
+**La produzione regge.**
+
+Tutti e otto i punti chiesti passano. Il flusso primario di un utente nuovo si percorre intero sugli URL pubblici, a 375 e a 1440, con la console pulita e nessuna chiamata fallita oltre al 503 previsto di billing. I due difetti che a suo tempo tenevano fermo il rilascio restano chiusi **sulla produzione**, non solo in locale: N1 (chiusura della seduta senza rete) passa tutti e tre gli scenari, N2/R1/R2 confermati. axe-core: **0 violazioni su 12 stati**. Web Vitals: tutte e dieci le righe dentro il budget con un ordine di grandezza di margine. Il cold start di Render — l'unica incognita che in locale non esisteva — l'ho misurato invece di stimarlo: **6,1 s**, e la pagina che deve vendere non perde il prezzo nemmeno mentre il server dorme.
+
+I sei difetti elencati sotto sono tutti di livello 3-5: nessuno rompe un pagamento, nessuno perde dati, nessuno blocca il flusso principale a nessuno, tastiera e screen reader compresi. Il più visibile è D2, ed è una riga di codice. Le riserve vere non sono difetti trovati ma cose **non verificabili** da qui: Stripe reale, LLM reale, email, e i dispositivi veri — elencate in fondo.
+
+### Esito punto per punto
+
+| # | Che cosa | Esito | Prova |
+|---|---|---|---|
+| 1 | Flusso primario completo, utente nuovo, 375 e 1440 | **passa** | `prod-flow.js`, 16 passi: landing (prezzo dall'API a y=513, CTA y=616, `scrollW=375`, `og:image` presente) → registrazione → 5 passi di onboarding + gate sicurezza (7 domande) + consenso art. 9 con nota libera → "La tua scheda è pronta." (tabella, **14 apici**, 0 card Pro) → `/oggi` "Full Body A · 3 esercizi · circa 30 minuti" → readiness (1 sola POST, riga del coach "Tutto a posto: oggi il piano resta com'è.") → seduta (3 esercizi, 3 serie loggate, timer, `data-status=SALVATO`) → chiusura (1 sola `POST /close`) → `/oggi/chiusa` "Fatta. · Seduta corta chiusa: 3 serie su 9" → `/oggi` "Seduta fatta, versione corta". **Timer e RIR** (`prod-rir.js`, `prod-rir3.js`): dopo la spunta si apre `[role="timer"]` "RIPOSO 2:00" con "+30″" e "Salta", il conto scorre davvero (2:00 → 1:57 in 3 s), e dentro il timer c'è la domanda RIR "Quante ne avevi ancora in canna (RIR)?" con cinque pill radio 0/1/2/3/4+; scelto **2**, il server registra `{"weight_kg":50,"reps":10,"rir":2,"status":"done"}`. |
+| 2 | La Nota (apice → foglio → apparato) con note dal DB seedato | **passa** | `prod-flowb.js`: foglio della nota 1 della chat = titolo + affermazione + "Non dice" + **grado di evidenza B** + fonte completa; DOI veri risolti dal seed: `https://doi.org/10.1007/s40279-017-0788-x`, `https://doi.org/10.1519/JSC.0000000000001272`. `prod-kbd4.js`: l'apparato in fondo a `/chat` porta 5 link DOI reali (Grgic 2018, Schoenfeld 2016, Refalo 2023…). Escape chiude il foglio e il focus torna sull'apice. |
+| 3 | Paywall: 503 onesto, nessuna card Pro dove è vietata | **passa** | `prod-flowb.js` a 375 e 1440: `/prezzi` → "Passa a Pro, mensile" → `POST /billing/checkout → 503` e a schermo *"Errore: I pagamenti non sono ancora attivi. Se ti serve Pro adesso scrivimi a gabrymark06@gmail.com."* — il `detail` del server, non "Senza rete". `prod-dbl2.js` C1: 3 tap nello stesso giro di eventi → **1 sola** `POST /billing/checkout` (G7 tiene anche in produzione). `prod-procard.js` a 375 e 1440: `.pro-card = 0` su `/oggi`, `/oggi/seduta`, `/oggi/readiness`, `/settimana`, `/progressi`, `/chat`, sui 7 schermi di `/onboarding/*` e **dentro il blocco di sicurezza** della readiness (dolore forte → "Un dolore forte non lo valuta un'app.", 0 card Pro, 0 elementi che nominano Pro). L'unico richiamo a Pro sta in `/account`, dove è previsto. |
+| 4 | PWA e seduta offline (difetto N1) | **passa** | `prod-pwa.js`: service worker `activated` e `controller` su `/serwist/sw.js`, manifest 200 (`start_url: /oggi`, 3 icone servite), cache `pages-oggi` + `serwist-precache-v2`; senza rete una rotta **mai visitata** (`/crediti`) rende `/~offline` "Senza rete. Quello che vedi è l'ultima versione che ho." `prod-n1.js` (i 3 casi del terzo passaggio, rieseguiti sulla produzione): **A** 2 serie offline → "Chiudi comunque" → `data-status="closed-offline"` "Chiusa sul telefono · la mando appena torna la rete", spostamento su `/chat` dalla tab bar, rete che torna **lì** → **1 sola** `POST /sync`, server `status=short`, coda e bozze a 0, `/oggi` "Seduta fatta, versione corta"; **B** doppio tap su "Chiudi comunque" → **1 sola** `close` in coda → 1 `POST /sync`; **C** rete che torna a metà seduta → stesso documento, 0 navigazioni, timer aperto, input 62 e 63 intatti, serie 1 sul server 62×11 e seduta ancora `planned`. |
+| 5 | Console pulita, nessuna chiamata fallita oltre al 503 | **quasi** | Su tutto il flusso principale, chat, settimana, progressi, account, PWA e axe: `console: []`, `API fallite: []`. Le sole risposte ≥400 attese e viste: `POST /billing/checkout → 503` (billing non configurato). Due eccezioni, entrambe provocate dal test: il 409 di D3 qui sotto e il 422 di un messaggio da 10.000 caratteri forzato via DOM. |
+| 6 | Web Vitals reali sulle 5 rotte | **passa** | Tabella sotto. Tutti i valori con l'API **calda**; il cold start è misurato a parte. |
+| 7 | axe sulle rotte principali | **passa** | `prod-axe.js`, axe-core 4.13, tag `wcag2a/aa + wcag21 + wcag22aa + best-practice`: `/`, `/prezzi`, `/oggi`, `/oggi/seduta`, `/chat`, `/account` × {375, 1440} = **12 stati, 0 critical/serious, 0 moderate/minor**. |
+| 8 | SEO e sicurezza | **passa con un'osservazione** | `robots.txt` col dominio giusto, `Allow` sulle 5 pubbliche e `Disallow` su `/oggi`, `/settimana`, `/chat`, `/progressi`, `/account`, `/onboarding`, `/blocco`, `/accedi`, `/registrati`, `/serwist`; `sitemap.xml` con 5 `<loc>` tutti su `https://fitcoach-three-xi.vercel.app`; `<meta name="robots" content="noindex, nofollow">` su `/oggi`; canonical sulla landing. Header frontend: `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`. API: `x-content-type-options`, `referrer-policy: no-referrer`, `permissions-policy`. **`X-Request-Id` su ogni errore provocato**: 404 `7974be2cdeab49ec`, 401 `7726f9c2cde94c8c`, 422 `e20d90e90dc44acb`, 405 `26280e4bb0cd4a4a`, tutti con corpo `{"code": ..., "detail": ...}` in italiano. Osservazioni D4 e D5 sotto. |
+
+### Il cold start di Render, misurato davvero
+
+Il punto più delicato del passaggio in produzione, perché è l'unica cosa che in locale non esisteva. **Misurato, non stimato** (`prod-coldreal.sh`): 16 minuti e 40 secondi di silenzio totale verso l'API — nessun test, nessun browser, nessuna richiesta — per lasciare che Render si addormenti sul serio, poi la prima chiamata.
+
+```
+inizio silenzio: 10:35:49 UTC
+fine silenzio:   10:52:29 UTC
+  /prezzi               HTTP 200 in 0.278 s
+  API /billing/prices   HTTP 200 in 6.108 s   <== COLD START REALE
+```
+
+**6,1 secondi, non 50-60.** Per confronto, la stessa chiamata da sveglia sta sotto i 70 ms: il fattore 100 conferma che il servizio dormiva davvero. Il numero passato dal ship-engineer era prudenziale; su questo servizio il risveglio è molto più rapido. Va comunque trattato come un valore che può crescere (dopo un deploy, o con il servizio fermo da più ore).
+
+**La conseguenza che temevo non si verifica, e va detto con la stessa precisione.** `/prezzi` è dinamica a ogni richiesta (usa `searchParams`) e chiama l'API lato server con un timeout di 8 s (`frontend/src/lib/prices.ts:7,15`): se l'API dorme, `getPrices()` torna `null` e la pagina che deve vendere perde il prezzo sopra la piega. Alla prova, **non succede**: servita nell'istante esatto in cui l'API era addormentata, `/prezzi` è tornata in **0,278 s** con `9,99` nel HTML, `data-prices="api"`, **zero** box d'errore, e perfino la `<meta name="description">` col prezzo vero. Il merito è della Data Cache di Next (`next: { revalidate: 60 }`): serve il valore precedente e rivalida dietro, così il risveglio non passa mai davanti all'utente.
+
+Stessa verifica sulla landing, che è ISR con `stale-time 300`: sei richieste nei due minuti del risveglio, attraverso stati `STALE` e `HIT` e una rigenerazione (`age` 1042 → 19), **il prezzo above the fold c'è in tutte e sei**. Nessuna rigenerazione ha prodotto una pagina senza numeri.
+
+Con questo cade la **riserva n. 6 del terzo passaggio** ("`/prezzi` con l'API giù al render server: coperto dal codice, non eseguito"): ora è eseguito, ed è coperto davvero.
+
+**Che cosa vede l'utente mentre l'API si sveglia** (`prod-cold.js`, risveglio simulato a 55 s per guardare la finestra al rallentatore, visto che quella vera dura 6 s): niente di rotto e niente di falso. `/oggi` mostra lo scheletro e "Carico la scheda…"; `/chat` mostra "Carico la conversazione…" con il composer già utilizzabile; `/prezzi` ha già i prezzi dalla cache. A risposta arrivata le tre schermate si completano da sole, **senza un reload, senza un `role="alert"`, senza una chiamata fallita e con la console pulita**. Nessuna delle tre dice mai "Senza rete" mentre la rete c'è. Resta l'osservazione D1.
+
+### Difetti trovati
+
+Nessuno è bloccante. In ordine di danno all'utente.
+
+#### D2 · "Invia" è abilitato a campo vuoto e non fa niente — frontend-engineer — livello 3 (fa sembrare il prodotto rotto)
+- **Riproduzione (`prod-composer.js`, produzione, 375):** `/chat`, campo vuoto → il pulsante Invia risulta `isEnabled()=true`, `aria-disabled=null`, `disabled=null`. Click → `POST /chat/messages = 0`, messaggi `3 → 3`, `role=alert` vuoto, `#annunci` vuoto. Stessa cosa con soli spazi: `"     "` → Invia abilitato, nessuna chiamata, nessun messaggio.
+- **Perché conta:** un pulsante primario che risponde come se fosse attivo e non produce nulla, e senza nemmeno dire perché. Su un'interfaccia dove tutto il resto spiega sempre il proprio stato, è l'unico punto che tace. Chi usa uno screen reader non riceve alcun annuncio.
+- **Dove:** `frontend/src/components/chat/Composer.tsx:33` (`if (!t || sending) return;` esce in silenzio) e `:54` (il `<Button type="submit">` non ha `disabled`).
+- **Correzione:** `disabled={!text.trim()}` sul pulsante (la textarea resta focalizzabile e `readOnly` durante l'invio, quindi M4 non si rompe). Test: campo vuoto → `isEnabled()=false`; un carattere → `true`.
+
+#### D1 · Durante il risveglio dell'API la schermata è muta per chi guarda — frontend-engineer — livello 5 (rifinitura)
+- **Prova:** `Skeleton.tsx:6` mette l'etichetta in `<span className="visually-hidden">`. Quindi "Carico la scheda…" lo **sente** uno screen reader (il contenitore è `role="status"` + `aria-busy`) e non lo **vede** nessun altro: lo screenshot `prod-shots/C1-_oggi-3s.png` mostra quattro barre grigie e nient'altro. Con l'API calda dura 300 ms e non è un problema; al risveglio dura quanto il risveglio.
+- **Perché conta poco, e perché lo segnalo lo stesso:** il risveglio misurato è di **6,1 s**, non un minuto, quindi il danno reale oggi è piccolo. Ma è l'unico punto dell'app in cui il tempo passa senza una parola visibile, e su Render free il risveglio è una condizione ordinaria, non un guasto.
+- **Dove:** `frontend/src/components/ui/Skeleton.tsx:6` e `:18`; chiamanti a `app/(app)/oggi/page.tsx:34`, `components/chat/ChatScreen.tsx:164`, `components/week/WeekScreen.tsx:70`, `app/onboarding/pronto/Ready.tsx:47`.
+- **Correzione:** rendere l'etichetta visibile dopo una soglia (2-3 s), con la stessa voce del resto del prodotto — "Sto svegliando il server, ci vuole qualche secondo" — e lasciarla `visually-hidden` prima. Costa una `useEffect` con un timer dentro `Skeleton`.
+
+#### D3 · Doppio click su "Crea l'account" può mandare due registrazioni (409) — frontend-engineer — livello 5 (rifinitura)
+- **Riproduzione (`prod-flow.js`, 1 volta su 7 tentativi):** `/registrati` compilato, `click` + secondo `click` appena il pulsante torna abilitato → `POST /auth/register = 2`, la seconda `→ 409`, e in console `Failed to load resource: the server responded with a status of 409`. Il flusso **arriva comunque** su `/onboarding/1` e l'utente non vede un errore. Non riproducibile a comando: `prod-dbl.js` A/B e `prod-dbl2.js` A2-A4 danno `POST = 1` in 6 tentativi su 7 (3 click nello stesso giro di eventi → sempre 1 sola).
+- **Perché succede:** la guardia `inFlight` viene liberata nel `finally`, che gira **anche sul percorso di successo**, subito dopo `router.replace("/onboarding/1")`. `router.replace` non attende il cambio di pagina: resta una finestra in cui la pagina è ancora `/registrati`, il pulsante è di nuovo abilitato e un secondo click riparte. In locale la finestra era invisibile; con la latenza di Render si apre.
+- **Dove:** `frontend/src/app/(public)/registrati/RegisterForm.tsx:46-49` (il `finally` con `inFlight.current = false`), guardia dichiarata a `:20` e usata a `:24`.
+- **Correzione:** liberare la guardia **solo nel `catch`**, come fa già `Pricing.tsx:64` (lì il commento a `:55` dice esattamente il perché: "il ref resta true: la pagina sta per andare"). Sul percorso di successo la pagina cambia e il componente si smonta. Test: `prod-dbl2.js` ×10 → sempre `POST /auth/register = 1`.
+
+#### D4 · Nessuna Content-Security-Policy sul frontend — ship-engineer / frontend-engineer — livello 5 (irrobustimento, preesistente)
+- **Prova:** `curl -sI https://fitcoach-three-xi.vercel.app/` restituisce HSTS, `nosniff`, `X-Frame-Options`, `Referrer-Policy` — e nessun `Content-Security-Policy`.
+- **Perché conta:** l'app rende nel DOM testo prodotto dall'LLM e testo scritto dall'utente. L'iniezione è risultata pulita alla prova (`prod-edge.js`: `<script>alert(1)</script><img src=x onerror=alert(2)>` inviato in chat → **0** script o `img[onerror]` nel DOM, nessun dialogo, console pulita), quindi è una seconda linea di difesa, non un buco aperto. Con l'LLM vero al posto del provider fake, la superficie cresce.
+- **Dove:** `frontend/next.config.ts:8-28` (blocco `headers()`, tre header su `/(.*)`).
+- **Correzione:** aggiungere una CSP, all'inizio in `Content-Security-Policy-Report-Only`, con `default-src 'self'`, `connect-src 'self' https://fitcoach-api-208b.onrender.com`, `img-src 'self' data:`, `frame-ancestors 'none'`; poi promuoverla dopo aver letto i report.
+
+#### D5 · L'API non manda HSTS — backend-python — livello 5 (irrobustimento)
+- **Prova:** `curl -sI https://fitcoach-api-208b.onrender.com/health` → `x-content-type-options`, `referrer-policy: no-referrer`, `permissions-policy` presenti; **nessun `strict-transport-security`**.
+- **Perché conta:** su quel dominio viaggiano i bearer token. La TLS la termina Render/Cloudflare, quindi il rischio pratico è basso, ma l'header costa una riga e chiude il caso della prima richiesta in chiaro.
+- **Dove:** `backend/app/security_headers.py:7-11` (`SECURITY_HEADERS`).
+- **Correzione:** aggiungere `"strict-transport-security": "max-age=63072000; includeSubDomains"`. Il test `backend/tests/test_qa_fixes.py:233-235` va aggiornato insieme.
+
+#### D6 · Gli errori di invio in chat sono annunciati come `status`, non come `alert` — frontend-engineer — livello 5 (rifinitura)
+- **Prova (`prod-422.js`, 5 codici simulati sulla produzione):** 422 → *"Manca o non va bene il campo: text."*; 500 → *"Errore dalla nostra parte. Se continua, scrivimi a gabrymark06@gmail.com."*; 429 → *"Troppe richieste. Riprova tra poco."*; 503 → *"Il coach non risponde in questo momento…"*; 409 → *"Conflitto."*. **Il testo scritto resta nel campo in tutti e cinque i casi** e il messaggio ottimista resta a schermo: il comportamento è corretto. Ma il contenitore è `role="status"` (aria-live polite), quindi l'annuncio può arrivare dopo, o perdersi dietro un altro annuncio.
+- **Dove:** `frontend/src/components/chat/Composer.tsx:61-65`.
+- **Correzione:** `role="alert"` sul paragrafo dell'errore (resta `role="status"` per la riga della quota). Nota: è una scelta discutibile in una chat, dove l'assertivo interrompe — se il team preferisce il polite, va scritto nel design system come scelta, non lasciato implicito.
+
+### Numeri — Web Vitals reali in produzione
+
+`prod-vitals.js`, `PerformanceObserver` nel browser, **rete vera senza throttling e senza CPU rallentata**, 2 giri per riga, API calda. Sono i numeri della produzione da una connessione desktop italiana, non un punteggio di laboratorio: vanno letti come limite superiore ottimistico, non come quello che vedrà un utente in 4G in palestra.
+
+| viewport | rotta | LCP | CLS | INP (evento più lento) | TTFB | JS trasferito |
+|---|---|---|---|---|---|---|
+| 375 | `/` | 316 ms | 0 | 16 ms | 67 ms | 167 kB |
+| 375 | `/prezzi` | 308 ms | 0 | 16 ms | 58 ms | 169 kB |
+| 375 | `/oggi` | 388 ms | 0 | 0 ms | 60 ms | 199 kB |
+| 375 | `/oggi/seduta` | 448 ms | 0 | 16 ms | 58 ms | 202 kB |
+| 375 | `/chat` | 328 ms | 0 | 0 ms | 61 ms | 195 kB |
+| 1440 | `/` | 168 ms | 0 | 0 ms | 59 ms | 167 kB |
+| 1440 | `/prezzi` | 268 ms | 0 | 16 ms | 56 ms | 171 kB |
+| 1440 | `/oggi` | 192 ms | 0 | 16 ms | 60 ms | 201 kB |
+| 1440 | `/oggi/seduta` | 532 ms | 0,001 | 16 ms | 57 ms | 207 kB |
+| 1440 | `/chat` | 184 ms | 0,015 | 16 ms | 59 ms | 201 kB |
+
+Budget del progetto: LCP < 2,5 s, CLS < 0,1, INP < 200 ms. **Tutte e dieci le righe passano con un ordine di grandezza di margine.** Nessuna di queste misure è influenzata dal cold start: l'API era calda in tutti i giri (TTFB 56-67 ms, servito da Vercel). Le rotte dell'app (`/oggi`, `/oggi/seduta`, `/chat`) sono client-side e non aspettano l'API per il primo paint — è per questo che il risveglio di Render (6,1 s misurati) non entra in queste colonne: si vede negli stati di caricamento, non nell'LCP.
+
+**R1 chiuso e confermato in produzione:** `/prezzi` CLS **0** a 375 e a 1440 (era 0,028 al terzo passaggio). La correzione è doppia e c'è tutta: `preload: true` su `archivoRiga` (`frontend/src/app/fonts.ts:24-28`, col commento che cita R1) e i due `<span className="nowrap">` sui gruppi prezzo (`frontend/src/app/(public)/prezzi/Pricing.tsx:76,80`). Da notare, per onestà: su questa rete lo shift non si vedrebbe comunque, perché il font arriva prima del primo paint — la prova che la correzione è giusta sta nel codice più che in questo 0.
+
+**R2 chiuso e confermato:** la guardia della chiusura è il ref `closeInFlight` (`frontend/src/app/(app)/oggi/seduta/page.tsx:90`, commento a `:46`), e `prod-n1.js` B in produzione mette **una sola** `close` in coda al doppio tap offline.
+
+### Accessibilità
+
+**Verificata a mano, con la tastiera, non solo con lo strumento.**
+
+- **axe-core 4.13** su 12 stati (6 rotte × 375/1440): **0 violazioni**, di qualunque impatto.
+- **Percorso con Tab su `/oggi/seduta` a 1440, 28 tappe** (`prod-axe.js`): si arriva ovunque, nell'ordine giusto — skip link → logo → tab bar (5 voci, tutte 199×44) → "Chiudi seduta" → "Come si fa" → apici → per ogni serie *peso → ripetizioni → spunta* → "Aggiungi serie" → "Togli l'ultima" → "Sostituisci" → "Salta esercizio" → "Note 1–6". **Nessuna trappola.** Focus visibile su tutte le tappe: `outline: solid 2px rgb(23,24,26)` sui link e sui pulsanti, e sugli input anche un `box-shadow` inset. Gli apici usano un indicatore proprio invece dell'outline: verificato **a pixel** (`prod-kbd.js`, ritaglio della stessa area con e senza focus → immagini diverse, 873 b vs 1380 b), quindi il focus si vede anche lì.
+- **Il foglio della nota si comporta diversamente, e giustamente, alle due larghezze** (`prod-kbd3.js`, `prod-kbd4.js`): a **1440** è un `<aside class="panel panel-overlay" role="complementary">` non modale, fissato a destra (400×900, `z-index: 41`); all'apertura il focus va sul suo `<h2 tabindex="-1">`, Tab porta a "Chiudi" e poi prosegue nella pagina — corretto per un pannello non modale, che non deve trattenere nessuno. A **375** è un foglio modale: 14 Tab di fila restano su "Chiudi", cioè il focus è trattenuto. In entrambi i casi **Escape chiude e il focus torna sull'apice di partenza**. I link DOI non stanno nel foglio ma nell'apparato in fondo alla pagina, dove si raggiungono con il Tab normale: architettura coerente, non un link irraggiungibile.
+- **`lang="it"`** sull'`<html>`; `meta viewport` `width=device-width, initial-scale=1, viewport-fit=cover` — **zoom non disabilitato**, nessun `maximum-scale` né `user-scalable=no`.
+- **Target sotto i 44 px:** solo gli apici della Nota, **32×44** (larghezza 32, altezza 44), su tutte le rotte e tutte e tre le larghezze. Sono marcatori in apice dentro il testo corrente, il caso che WCAG 2.5.8 esenta esplicitamente ("inline"): l'altezza è piena e il bersaglio verticale è a norma. Lo segnalo perché il `CLAUDE.md` dello studio chiede 44×44 senza eccezioni: è una deroga difendibile, ma va decisa, non subita. Tutto il resto è ≥ 44 px (tab bar 199×44, pulsanti 56 di altezza).
+
+### Bordi attaccati
+
+- **Responsive 375 / 768 / 1440** su 7 rotte (`prod-edge.js`): **nessuno scroll orizzontale** (`scrollWidth == clientWidth` su tutte e 21 le combinazioni), nessun testo tagliato. Le tabelle di `/` e `/prezzi` a 375 escono dal viewport **dentro il loro `.scroll-x` con `tabIndex=0`**, che è il comportamento voluto e raggiungibile da tastiera.
+- **Input ostili in chat** (`prod-edge.js`, `prod-composer.js`): campo vuoto → D2 sopra; 10.000 caratteri forzati via DOM → il server risponde **422 con `code: validation_error`** e la UI mostra il `detail`, il testo resta nel campo (il campo ha `maxLength={2000}`, quindi un utente vero non ci arriva né scrivendo né incollando); emoji e caratteri combinanti → risposta normale; `<script>alert(1)</script><img src=x onerror=alert(2)>` → **0** nodi iniettati, nessun dialogo, console pulita; numeri negativi nel testo → risposta normale.
+- **Refresh a metà onboarding** (`prod-edge.js`): F5 al passo 4 → resta su `/onboarding/4` con la schermata giusta ("PASSO 4 DI 6 · Dove ti alleni?"); "indietro" del browser → `/onboarding/3` con **2 radio già segnati**. Le risposte stanno sul server, non in `localStorage` (`[]`), quindi sopravvivono anche al cambio di dispositivo.
+- **Doppio tap sui pulsanti che creano o pagano:** checkout 3 click nello stesso giro → 1 sola chiamata; chiusura seduta offline doppio tap → 1 sola `close`; registrazione → D3 sopra.
+- **Superficie API contro l'OpenAPI vero:** i **43** percorsi chiamati da `frontend/src/lib/api/endpoints.ts` esistono tutti nelle **52** rotte di `/openapi.json` in produzione, e tutti i **115** schemi del contratto pubblicato sono presenti in `frontend/src/lib/api/schema.d.ts`. Il frontend è compilato contro esattamente il contratto che è online: nessun campo letto dal client che il server non manda.
+
+### Non verificato
+
+Quello che questo passaggio **non** ha potuto toccare, e che cosa servirebbe.
+
+1. **Stripe reale.** Resta la riserva n. 1 del terzo passaggio, invariata: senza chiavi si è verificato solo che checkout, portale e recesso rispondano **503 `billing_unavailable`** con un `detail` leggibile. Nessuna transazione, nessun webhook firmato, nessun rimborso. Serve una transazione in modalità test con webhook, e il recesso a 14 giorni percorso fino al rimborso.
+2. **LLM vero.** Il provider è `fake` deterministico: le risposte del coach arrivano istantanee e sempre uguali. Con un modello vero cambiano tempo alla prima parola, lunghezza, streaming e filtro di sicurezza — e la chat è la schermata dove il tempo di attesa si sente di più.
+3. **Email.** Disattivata: `/account` dice "Email non ancora verificata. Rimanda il link" e il link non parte. Verifica e reset password non sono mai stati percorsi end-to-end in produzione.
+4. **Il piano Pro visto da dentro.** L'utente di prova è Base. Al terzo passaggio lo stato Pro si simulava scrivendo in Postgres locale; su Neon non l'ho fatto. Quindi in produzione non sono verificati: `/account` con abbonamento attivo, "Gestisci abbonamento" (portale), e il recesso art. 52 dalla UI. Servirebbe una riga in `entitlements` + `subscriptions` su Neon, oppure Stripe in test.
+5. **Dispositivi veri.** Tutto è Edge/Chromium headless su Windows. iOS Safari e Android Chrome non sono stati toccati, ed è lì che vivono le parti più delicate: il service worker, IndexedDB, `navigator.onLine`, la sospensione dell'app in background e la tastiera a schermo dentro il foglio a 375.
+6. **Screen reader vero.** Verificati DOM, ruoli, nomi accessibili, `aria-live`, ordine di tabulazione e focus. NVDA e VoiceOver no.
+7. **Concorrenza in produzione.** Le gare su `sync` (difetto N2) sono state richiuse in locale al terzo passaggio con `with_for_update`; su Neon, con la latenza vera e il connection pooling, non le ho rieseguite.
+8. **Lighthouse.** Non eseguito in questo passaggio: i Web Vitals vengono da `PerformanceObserver` sulla rete vera, che è la misura che conta per la produzione, ma non danno i punteggi per categoria. I punteggi del terzo passaggio (Perf 90-93 mobile, 100 desktop, A11y/Best practices/SEO 100) restano il riferimento.
+
+---
+
 ## Terzo passaggio — 2026-09-17 (mirato: N1-N4)
 
 Server riavviati da zero (backend :8000 dopo `alembic upgrade head`, frontend `pnpm build && pnpm start` :3000, build pulita). `pytest -q` **158 passed in 74 s**. Stesso metodo dei passaggi precedenti; script nuovi `qa3-*.js`, `qa3-*.py`, Lighthouse in `scratchpad/lh3/`, axe in `qa3-axe.log`, log backend `qa3-backend.log` (**0** `unhandled_error` per tutta la sessione, gare comprese).
