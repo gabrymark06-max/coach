@@ -41,6 +41,8 @@ export default function ReadinessPage() {
     inFlight.current = true;
     setBusy(true);
     setSubmitError(null);
+    // QA produzione D3: se si esce dalla pagina, la guardia resta chiusa fino allo smontaggio (la navigazione non è istantanea).
+    let leaving = false;
     try {
       const out = await api.sessions.readiness(sessionId, answers as ReadinessIn);
       await mutate(`/sessions/${sessionId}`, out.session, { revalidate: false });
@@ -48,13 +50,16 @@ export default function ReadinessPage() {
       setResult(out);
     } catch (err) {
       if (isApiError(err) && err.code === "readiness_already_done") {
+        leaving = true;
         router.replace("/oggi/seduta");
         return;
       }
       setSubmitError(isApiError(err) ? err.detail : "Errore.");
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      if (!leaving) {
+        inFlight.current = false;
+        setBusy(false);
+      }
     }
   }
 

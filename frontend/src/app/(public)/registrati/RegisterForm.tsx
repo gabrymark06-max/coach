@@ -34,9 +34,14 @@ export function RegisterForm() {
     }
     inFlight.current = true;
     setBusy(true);
+    // QA produzione D3: `router.replace` non aspetta il cambio di pagina. Se la guardia si liberasse anche sul percorso
+    // di successo, resterebbe una finestra in cui la pagina è ancora /registrati e un secondo click manda una seconda
+    // registrazione (409). Quando si esce, guardia e "Creo l'account…" restano: il componente si smonta da solo.
+    let leaving = false;
     try {
       const pair = await api.auth.register({ email, password, accept_terms: true });
       writeAuth(pair);
+      leaving = true;
       router.replace("/onboarding/1");
     } catch (err) {
       if (isApiError(err) && err.code === "email_taken") setErrors({ email: "questa email è già registrata." });
@@ -44,8 +49,10 @@ export function RegisterForm() {
       else if (isApiError(err)) setErrors({ form: err.detail });
       else setErrors({ form: "Errore. Riprova." });
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      if (!leaving) {
+        inFlight.current = false;
+        setBusy(false);
+      }
     }
   }
 

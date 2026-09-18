@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSWRConfig } from "swr";
 import type { EmptyState as EmptyStateT, TodayOption } from "@/lib/api/types";
 import { api } from "@/lib/api/endpoints";
@@ -19,6 +19,9 @@ export function EmptyState({ state, date }: { state: EmptyStateT; date: string }
   const { mutate } = useSWRConfig();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // QA produzione D3: la guardia sta in un ref, non nello stato (al secondo tap dello stesso giro `busy` non è ancora
+  // aggiornato) e non si libera quando la pagina sta per cambiare.
+  const inFlight = useRef(false);
 
   async function choose(o: TodayOption) {
     if (o.action.type === "route") {
@@ -31,23 +34,30 @@ export function EmptyState({ state, date }: { state: EmptyStateT; date: string }
       setError("Non trovo il messaggio del coach: apri la chat.");
       return;
     }
-    if (busy) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(o.id);
     setError(null);
+    let leaving = false;
     try {
       const reply = await api.chat.option(o.action.target, messageId);
       await Promise.all([mutate("/today"), mutate("/plans/current"), mutate("/chat/messages")]);
+      leaving = true;
       router.push(`/chat?msg=${reply.id}`);
     } catch (e) {
       if (isApiError(e) && e.code === "option_already_chosen") {
         // scelta già fatta (altro dispositivo o /today in cache): si aggiorna Oggi e si va dove la scelta è già raccontata
         await mutate("/today");
+        leaving = true;
         router.push("/chat");
         return;
       }
       setError(isApiError(e) ? e.detail : "Errore. Riprova.");
     } finally {
-      setBusy(null);
+      if (!leaving) {
+        inFlight.current = false;
+        setBusy(null);
+      }
     }
   }
 

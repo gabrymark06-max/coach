@@ -67,10 +67,14 @@ export function SafetyGate() {
     inFlight.current = true;
     setBusy(true);
     setSubmitError(null);
+    // QA produzione D3: quando si esce verso /onboarding/pronto la guardia resta chiusa — la navigazione non è
+    // istantanea e un secondo invio creerebbe un secondo onboarding.
+    let leaving = false;
     try {
       const out = await api.onboarding.submit(body);
       update({ result: { first_session_id: out.first_session_id, coach_comment_message_id: out.coach_comment_message_id, safety_notice_it: out.safety_notice_it ?? null } });
       await Promise.all([mutate("/me"), mutate("/today"), mutate("/plans/current"), mutate("/chat/messages")]);
+      leaving = true;
       router.replace("/onboarding/pronto");
     } catch (err) {
       if (isApiError(err) && err.code === "safety_ack_required") {
@@ -83,8 +87,10 @@ export function SafetyGate() {
         setSubmitError("Errore. Riprova.");
       }
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      if (!leaving) {
+        inFlight.current = false;
+        setBusy(false);
+      }
     }
   }
 

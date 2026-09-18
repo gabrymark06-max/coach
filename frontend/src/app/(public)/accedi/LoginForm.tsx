@@ -27,17 +27,23 @@ export function LoginForm({ next }: { next: string | null }) {
     inFlight.current = true;
     setBusy(true);
     setError(null);
+    // QA produzione D3: la guardia non si libera quando la pagina sta per cambiare — `router.replace` non aspetta il
+    // cambio, e nella finestra che resta un secondo click manderebbe un secondo login.
+    let leaving = false;
     try {
       const pair = await api.auth.login({ email, password });
       writeAuth(pair);
+      leaving = true;
       router.replace(next && next.startsWith("/") ? next : "/oggi");
     } catch (err) {
       if (isApiError(err) && err.status === 401) setError("Email o password non corrispondono.");
       else if (isApiError(err)) setError(err.detail);
       else setError("Errore. Riprova.");
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      if (!leaving) {
+        inFlight.current = false;
+        setBusy(false);
+      }
     }
   }
 

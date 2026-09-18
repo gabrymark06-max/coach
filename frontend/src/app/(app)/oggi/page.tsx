@@ -134,6 +134,8 @@ function PreviewCard({ preview: p, readinessRequired, date }: { preview: Session
     inFlight.current = true;
     setBusy(true);
     setShortError(null);
+    // QA produzione D3: quando si esce verso la seduta la guardia resta chiusa fino allo smontaggio.
+    let leaving = false;
     try {
       const out = await api.sessions.short(p.session_id);
       await mutate(`/sessions/${p.session_id}`, out.session, { revalidate: false });
@@ -141,13 +143,16 @@ function PreviewCard({ preview: p, readinessRequired, date }: { preview: Session
       setShort(out);
     } catch (err) {
       if (isApiError(err) && (err.code === "already_short" || err.code === "session_closed")) {
+        leaving = true;
         router.push("/oggi/seduta");
         return;
       }
       setShortError(isApiError(err) ? err.detail : "Errore. Riprova.");
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      if (!leaving) {
+        inFlight.current = false;
+        setBusy(false);
+      }
     }
   }
 

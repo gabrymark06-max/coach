@@ -46,18 +46,28 @@ export default function AccountPage() {
     }
   }, [desktop, me, installed]);
 
-  async function run(key: string, fn: () => Promise<void>) {
-    if (busy) return;
+  // QA produzione D3: guardia in un ref (al secondo tap dello stesso giro `busy` non è ancora aggiornato) e, quando
+  // l'azione porta via dalla pagina (`leaves`), non si libera: la navigazione non è istantanea.
+  const running = useRef(false);
+
+  async function run(key: string, fn: () => Promise<void>, leaves = false) {
+    if (running.current) return;
+    running.current = true;
     setBusy(key);
     setErr(null);
     try {
       await fn();
     } catch (e) {
       setErr(isApiError(e) ? e.detail : "Errore. Riprova.");
-    } finally {
+      running.current = false;
       setBusy(null);
       setDialog(null);
+      return;
     }
+    if (leaves) return;
+    running.current = false;
+    setBusy(null);
+    setDialog(null);
   }
 
   if (isLoading) {
@@ -132,10 +142,10 @@ export default function AccountPage() {
           <div className="row">
             {pro && sub ? (
               <>
-                <Button variant="secondary" loading={busy === "portal"} loadingText="Apro il portale…" onClick={() => run("portal", async () => openUrl((await api.billing.portal({})).url))}>
+                <Button variant="secondary" loading={busy === "portal"} loadingText="Apro il portale…" onClick={() => run("portal", async () => openUrl((await api.billing.portal({})).url), true)}>
                   Gestisci abbonamento
                 </Button>
-                <Button variant="tertiary" loading={busy === "cancel"} loadingText="Apro il portale…" onClick={() => run("cancel", async () => openUrl((await api.billing.portal({ intent: "cancel" })).url))}>
+                <Button variant="tertiary" loading={busy === "cancel"} loadingText="Apro il portale…" onClick={() => run("cancel", async () => openUrl((await api.billing.portal({ intent: "cancel" })).url), true)}>
                   Disdici
                 </Button>
               </>
@@ -284,11 +294,15 @@ export default function AccountPage() {
         loadingText="Cancello…"
         onCancel={() => setDialog(null)}
         onConfirm={() =>
-          run("delete", async () => {
-            await api.me.delete();
-            writeAuth(null);
-            router.replace("/account-cancellato");
-          })
+          run(
+            "delete",
+            async () => {
+              await api.me.delete();
+              writeAuth(null);
+              router.replace("/account-cancellato");
+            },
+            true,
+          )
         }
       >
         Tutti i dati vengono eliminati. Non si torna indietro.

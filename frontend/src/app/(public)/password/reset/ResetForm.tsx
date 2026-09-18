@@ -31,6 +31,9 @@ export function ResetForm({ token }: { token: string | null }) {
     }
     inFlight.current = true;
     setBusy(true);
+    // QA produzione D3: sul successo il form sparisce (schermata "Fatto." / "Controlla la posta.") e la guardia resta
+    // chiusa. Si libera solo dove il form resta a schermo, cioè in errore.
+    let leaving = false;
     try {
       if (token) {
         await api.auth.reset(token, password);
@@ -39,11 +42,14 @@ export function ResetForm({ token }: { token: string | null }) {
         const r = await api.auth.forgot(email);
         setDone(r.detail || "Se questa email è registrata, ti ho mandato il link. Vale 24 ore.");
       }
+      leaving = true;
     } catch (err) {
       setError(isApiError(err) ? err.detail : "Errore. Riprova.");
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      if (!leaving) {
+        inFlight.current = false;
+        setBusy(false);
+      }
     }
   }
 

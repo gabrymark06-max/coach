@@ -91,6 +91,9 @@ export default function SedutaPage() {
     closeInFlight.current = true;
     setClosing(true);
     setCloseError(null);
+    // QA produzione D3: sul percorso online la chiusura finisce su /oggi/chiusa. Finché la pagina non cambia davvero,
+    // guardia e stato "Chiudo…" restano: un secondo tap non manda una seconda chiusura.
+    let leaving = false;
     try {
       const r = await d.close({ force });
       if (r.kind === "conflict") {
@@ -111,13 +114,16 @@ export default function SedutaPage() {
         return;
       }
       window.sessionStorage.setItem(CLOSE_KEY, JSON.stringify({ close_line: r.out.close_line, notes: r.out.notes, offline: false }));
+      leaving = true;
       router.replace("/oggi/chiusa");
     } catch (e) {
       setCloseError(isApiError(e) ? e.detail : "Errore. Riprova.");
     } finally {
-      closeInFlight.current = false;
-      setClosing(false);
-      setCloseAsk(false);
+      if (!leaving) {
+        closeInFlight.current = false;
+        setClosing(false);
+        setCloseAsk(false);
+      }
     }
   }
 

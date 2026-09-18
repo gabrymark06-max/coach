@@ -1321,6 +1321,18 @@ span.set-check:hover {
   height: 28px;
 }
 
+/* D1: l'etichetta di caricamento si vede, non solo si sente. Sta nel flusso dal primo paint (nessuno spostamento);
+   la riga del risveglio arriva dopo, sotto le barre, dove non spinge giù niente di già letto. */
+.skeleton-label {
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.skeleton-wake {
+  margin-top: var(--space-3);
+  margin-bottom: 0;
+}
+
 .skeleton-big {
   height: 120px;
 }
