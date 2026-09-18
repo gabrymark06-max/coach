@@ -57,12 +57,18 @@ mancata seduta), rate limiting in memoria e un lifespan con connessioni persiste
 - **`pgserver`** (Postgres embedded di dev/test) è nel gruppo `dev` di `pyproject.toml`: `uv sync --no-dev` non lo
   installa. Verificato: import dell'app in un venv senza pgserver, `APP_ENV=prod`, ok.
 - **Fail-fast** in prod (`app/config.py`): senza `DATABASE_URL` → `RuntimeError("DATABASE_URL obbligatoria in
-  produzione")`; con il `JWT_SECRET` di sviluppo → `RuntimeError("JWT_SECRET di sviluppo non ammesso in produzione")`.
+  produzione")`; con il `JWT_SECRET` di sviluppo → `RuntimeError("JWT_SECRET di sviluppo non ammesso in produzione")`;
+  con `CORS_ORIGINS` vuota (o che si svuota normalizzando) → `RuntimeError("CORS_ORIGINS obbligatoria in produzione...")`.
   Verificato con la prova locale (§7).
 - **`DATABASE_URL` con `?sslmode=require&channel_binding=require`** (come la dà Neon) ora funziona: `app/db.py`
   traduce `sslmode` → `ssl` e scarta `channel_binding`; prima asyncpg faceva `TypeError` ancora prima di connettersi.
-- **`CORS_ORIGINS`** come variabile d'ambiente vera è `https://a,https://b` (virgole, niente JSON, niente slash finale).
+- **`CORS_ORIGINS`** come variabile d'ambiente vera è `https://a,https://b` (virgole, niente JSON).
   Prima della correzione (`NoDecode` in `config.py`) il processo non partiva: emerso solo nella prova da prod.
+  **Lo slash finale ora è tollerato** (2026-09-18): ogni voce viene ridotta all'origine canonica
+  `schema://host[:porta]` in minuscolo — `https://a.app/`, `https://A.App` e `https://a.app/path` diventano tutte
+  `https://a.app`, e la voce corretta finisce nei log (`cors_origin_normalizzata`). Il browser manda `Origin`
+  senza slash: prima della correzione un valore con slash faceva tornare **400 "Disallowed CORS origin"** a ogni
+  preflight. In prod una lista vuota dopo la normalizzazione è un fail-fast all'avvio.
 - **Il job email** gira nel processo: quando Render dorme, non gira. Con `EMAIL_PROVIDER=fake` è irrilevante oggi.
 - **Il seed** (`python -m scripts.seed`, chiama Crossref) non può girare su Render free (niente shell né one-off
   job): si lancia **dal PC** contro il `DATABASE_URL` di Neon (§3.3).
@@ -195,7 +201,7 @@ Poi rifai i primi tre punti del 3.7 sull'URL di produzione e togli la preview da
 | `DATABASE_URL` | **sì** | Neon, connessione diretta | `?sslmode=require&channel_binding=require` va bene |
 | `JWT_SECRET` | **sì** | generato da Render | ruotarlo invalida tutte le sessioni |
 | `APP_ENV` | no | `render.yaml` | `prod` → fail-fast attivo |
-| `CORS_ORIGINS` | no | a mano | virgole, niente slash finale, niente JSON |
+| `CORS_ORIGINS` | no | a mano | virgole, niente JSON; lo slash finale e le maiuscole vengono normalizzati |
 | `FRONTEND_URL` | no | a mano | link nelle email e nei ritorni da Stripe |
 | `SUPPORT_EMAIL` | no | a mano | mostrata agli utenti |
 | `CROSSREF_MAILTO` | no | a mano | letta da Settings; usata dal seed |

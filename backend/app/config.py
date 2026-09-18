@@ -4,9 +4,37 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
+import structlog
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+
+def canonical_origin(raw: str) -> str:
+    """Riduce una voce di CORS_ORIGINS all'origine canonica: `schema://host[:porta]`, minuscolo, senza slash finale.
+
+    Il browser manda `Origin` senza slash finale e senza path: se l'env var ne ha uno il confronto di
+    CORSMiddleware fallisce e il preflight torna 400 (difetto visto in produzione con `https://fitcoach.vercel.app/`).
+    Non solleva mai: una voce storta viene corretta e segnalata con un warning, l'avvio non si blocca.
+    """
+    value = raw.strip()
+    if not value or value == "*":  # il jolly non è un URL: normalizzarlo lo cancellerebbe
+        return value
+    parts = urlsplit(value)
+    if not parts.scheme or not parts.netloc:
+        cleaned = value.rstrip("/").strip()
+        if cleaned != value:
+            _warn_origin(raw, cleaned)
+        return cleaned
+    origin = f"{parts.scheme.lower()}://{parts.netloc.lower()}"
+    if origin != value:
+        _warn_origin(raw, origin)
+    return origin
+
+
+def _warn_origin(raw: str, normalized: str) -> None:
+    structlog.get_logger().warning("cors_origin_normalizzata", origine=raw, usata=normalized)
 
 
 class Settings(BaseSettings):
@@ -93,7 +121,9 @@ class Settings(BaseSettings):
     @classmethod
     def _split_origins(cls, v: object) -> object:
         if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
+            v = v.split(",")
+        if isinstance(v, (list, tuple)):
+            return [o for o in (canonical_origin(str(x)) for x in v) if o]
         return v
 
     @property
@@ -109,4 +139,9 @@ def get_settings() -> Settings:
             raise RuntimeError("DATABASE_URL obbligatoria in produzione")
         if s.jwt_secret.startswith("dev-only"):
             raise RuntimeError("JWT_SECRET di sviluppo non ammesso in produzione")
+        if not s.cors_origins:
+            raise RuntimeError(
+                "CORS_ORIGINS obbligatoria in produzione: origini separate da virgola, "
+                "es. https://fitcoach.vercel.app (schema+host, senza slash finale e senza path)"
+            )
     return s

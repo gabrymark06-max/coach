@@ -67,7 +67,7 @@ Il piano completo, con la lista di cosa serve e i comandi in ordine, è in [`../
 In breve: **Render** (web service free, Frankfurt, `../render.yaml`) + **Neon** (Postgres con pgvector) + **Vercel** per il frontend.
 
 - `APP_ENV=prod`, `DATABASE_URL` (Neon, connessione diretta: `?sslmode=require` viene tradotto per asyncpg), `JWT_SECRET` vero,
-  `CORS_ORIGINS` con il dominio del frontend (virgole, niente slash finale). Senza `DATABASE_URL` o con il `JWT_SECRET` di dev
+  `CORS_ORIGINS` con il dominio del frontend (virgole; slash finale e maiuscole vengono normalizzati, una lista vuota è un errore d'avvio). Senza `DATABASE_URL` o con il `JWT_SECRET` di dev
   il processo **non parte** (`app/config.py`).
 - Un solo worker uvicorn per replica finché il rate limiting resta in memoria (verifica #30).
 - `GET /health` (liveness, senza DB) per l'hosting; `GET /health/db` (`SELECT 1`) per il monitoraggio a bassa frequenza.
