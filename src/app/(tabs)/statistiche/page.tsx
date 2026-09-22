@@ -1,18 +1,24 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/shared/page-header";
-import { Soon } from "@/components/shared/soon";
+import { Suspense } from "react";
+import { ListSkeleton } from "@/components/shared/states";
+import { StatisticheView } from "./statistiche-view";
 
-export const metadata: Metadata = { title: "Statistiche" };
+export const metadata: Metadata = {
+  title: "Statistiche",
+  description:
+    "Volume per settimana e per mese, distribuzione muscolare, 1RM stimato e record personali.",
+};
 
 export default function StatistichePage() {
   return (
-    <>
-      <PageHeader title="Statistiche" />
-      <Soon
-        icon="trending"
-        title="Servono più dati"
-        line="Qui arriveranno volume settimanale, 1RM stimato e distribuzione per gruppo muscolare."
-      />
-    </>
+    <Suspense
+      fallback={
+        <div className="app-container pt-9">
+          <ListSkeleton rows={4} height={96} />
+        </div>
+      }
+    >
+      <StatisticheView />
+    </Suspense>
   );
 }

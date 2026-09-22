@@ -10,10 +10,13 @@ import { Button } from "@/components/ui/button";
 import { getDb } from "@/lib/db/db";
 import { getExercise } from "@/lib/db/queries";
 import { useLiveData } from "@/lib/hooks/use-live-data";
+import { useRouteId } from "@/lib/hooks/use-route-id";
 
 export function ModificaEsercizioView() {
   const params = useParams<{ id: string }>();
-  const state = useLiveData(() => getExercise(getDb(), params.id), [params.id]);
+  // l'id vero viene dall'indirizzo: offline si atterra sulla scocca (route-shell)
+  const id = useRouteId(params.id);
+  const state = useLiveData(() => getExercise(getDb(), id), [id]);
 
   return (
     <>

@@ -9,6 +9,7 @@ import { ExerciseCard } from "@/components/session/exercise-card";
 import { PlatesSheet } from "@/components/session/plates-sheet";
 import { SessionHeader } from "@/components/session/session-header";
 import { WarmupSheet } from "@/components/session/warmup-sheet";
+import { SortableItem, SortableList } from "@/components/shared/sortable";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -33,6 +34,7 @@ import {
   moveExercise,
   patchSet,
   removeExercise,
+  replaceExercise,
   replaceExerciseNotes,
   toggleSetCompleted,
 } from "@/lib/db/session-ops";
@@ -56,6 +58,7 @@ export function SessioneView() {
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [errorBySetId, setErrorBySetId] = React.useState<Record<string, string>>({});
   const [warmupFor, setWarmupFor] = React.useState<string | null>(null);
+  const [replaceFor, setReplaceFor] = React.useState<string | null>(null);
   const staleChecked = React.useRef(false);
 
   // §6.1 — in sessione si entra da un tocco. Un indirizzo o una ricarica portano alla
@@ -178,11 +181,30 @@ export function SessioneView() {
             }
           />
         ) : (
-          session.exercises.map((exercise, index) => (
-            <ExerciseCard
+          <SortableList
+            ids={session.exercises.map((exercise) => exercise.id)}
+            onReorder={(from, to) => {
+              const moved = session.exercises[from];
+              void mutate((current) => moveExercise(current, moved.id, to - from));
+              announce(
+                "session",
+                `${moved.exerciseName} spostato in posizione ${to + 1} di ${session.exercises.length}.`,
+              );
+            }}
+          >
+          {session.exercises.map((exercise, index) => (
+            <SortableItem
               key={exercise.id}
+              id={exercise.id}
+              label={exercise.exerciseName}
+              className="mb-4"
+            >
+            {(handle) => (
+            <ExerciseCard
               exercise={exercise}
               index={index}
+              dragHandle={handle}
+              onReplace={() => setReplaceFor(exercise.id)}
               total={session.exercises.length}
               showRpe={settings.showRpe}
               stepKg={settings.stepKg}
@@ -286,7 +308,10 @@ export function SessioneView() {
               }}
               onPlates={(weightKg) => setTool({ tool: "plates", target: weightKg })}
             />
-          ))
+            )}
+            </SortableItem>
+          ))}
+          </SortableList>
         )}
 
         {session.exercises.length > 0 ? (
@@ -313,6 +338,34 @@ export function SessioneView() {
               }),
             );
           }
+        }}
+      />
+
+      <ExercisePickerSheet
+        open={replaceFor !== null}
+        onOpenChange={(open) => !open && setReplaceFor(null)}
+        mode="replace"
+        title="Sostituisci esercizio"
+        replacing={
+          session.exercises.find((item) => item.id === replaceFor)?.exerciseName ?? null
+        }
+        onConfirm={async (picked) => {
+          const target = replaceFor;
+          const scelto = picked[0];
+          setReplaceFor(null);
+          if (!target || !scelto) return;
+          const previous = await buildSetsFromLibrary(getDb(), scelto.id);
+          await mutate((current) =>
+            replaceExercise(current, target, {
+              exerciseId: scelto.id,
+              exerciseName: scelto.name,
+              equipment: scelto.equipment as Equipment,
+              restSec: scelto.defaultRestSec ?? settings.defaultRestSec,
+              previous,
+            }),
+          );
+          announce("session", `Esercizio sostituito con ${scelto.name}.`);
+          toast.success(`Sostituito con «${scelto.name}»`);
         }}
       />
 
@@ -365,7 +418,7 @@ export function SessioneView() {
         onConfirm={async () => {
           const finished = await finishSession(getDb());
           setFinishing(false);
-          if (finished) router.replace(`/sessione/riepilogo/${finished.id}`);
+          if (finished) router.replace(`/sessione/riepilogo/${finished.session.id}`);
         }}
       />
 
@@ -412,7 +465,7 @@ export function SessioneView() {
         onConfirm={async () => {
           const finished = await finishSession(getDb());
           setStale(false);
-          if (finished) router.replace(`/sessione/riepilogo/${finished.id}`);
+          if (finished) router.replace(`/sessione/riepilogo/${finished.session.id}`);
         }}
       />
     </div>

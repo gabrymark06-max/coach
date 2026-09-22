@@ -13,8 +13,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SortableItem, SortableList } from "@/components/shared/sortable";
 import { announce } from "@/lib/announce";
-import { getDb } from "@/lib/db/db";
+import { getDb, newId } from "@/lib/db/db";
 import { createRoutine, updateRoutine } from "@/lib/db/mutations";
 import {
   SET_TYPE_LABEL,
@@ -46,6 +47,16 @@ export function RoutineEditor({ routine }: { routine?: Routine }) {
   const [exercises, setExercises] = React.useState<RoutineExercise[]>(
     routine?.exercises ?? [],
   );
+  /**
+   * Chiavi stabili, in parallelo agli esercizi.
+   *
+   * Una routine puo' contenere due volte lo stesso esercizio, e l'indice cambia proprio
+   * quando si riordina: nessuno dei due va bene come identita' per il trascinamento.
+   * Queste chiavi vivono solo qui e non finiscono su Dexie.
+   */
+  const [keys, setKeys] = React.useState<string[]>(() =>
+    (routine?.exercises ?? []).map(() => newId()),
+  );
   const [picker, setPicker] = React.useState(false);
   const [nameError, setNameError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -74,20 +85,32 @@ export function RoutineEditor({ routine }: { routine?: Routine }) {
     );
   };
 
-  const move = (index: number, delta: number) => {
-    const to = index + delta;
-    if (to < 0 || to >= exercises.length) return;
+  const moveTo = React.useCallback((from: number, to: number) => {
     markDirty();
     setExercises((current) => {
+      if (to < 0 || to >= current.length) return current;
       const next = current.slice();
-      const [moved] = next.splice(index, 1);
+      const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
       announce(
-        "system",
+        "session",
         `${moved.exerciseName} spostato in posizione ${to + 1} di ${next.length}.`,
       );
       return next.map((item, order) => ({ ...item, order }));
     });
+    setKeys((current) => {
+      if (to < 0 || to >= current.length) return current;
+      const next = current.slice();
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }, []);
+
+  const move = (index: number, delta: number) => {
+    const to = index + delta;
+    if (to < 0 || to >= exercises.length) return;
+    moveTo(index, to);
   };
 
   const save = async () => {
@@ -173,13 +196,22 @@ export function RoutineEditor({ routine }: { routine?: Routine }) {
             Nessun esercizio. Aggiungine almeno uno per poter avviare la routine.
           </p>
         ) : (
+          <SortableList
+            ids={keys}
+            onReorder={moveTo}
+          >
           <ul className="flex flex-col gap-4">
             {exercises.map((exercise, index) => (
-              <li
-                key={`${exercise.exerciseId}-${index}`}
+              <li key={keys[index] ?? index}>
+              <SortableItem
+                id={keys[index] ?? String(index)}
+                label={exercise.exerciseName}
                 className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-4"
               >
+              {(handle) => (
+              <>
                 <div className="flex items-start gap-3">
+                  {handle}
                   <h3 className="min-w-0 flex-1 break-words text-h3 text-[var(--text-primary)]">
                     {exercise.exerciseName}
                   </h3>
@@ -211,6 +243,7 @@ export function RoutineEditor({ routine }: { routine?: Routine }) {
                           .filter((_, i) => i !== index)
                           .map((item, order) => ({ ...item, order })),
                       );
+                      setKeys((current) => current.filter((_, i) => i !== index));
                     }}
                     className="inline-flex size-12 items-center justify-center rounded-[var(--radius-btn)] text-[var(--danger)] hover:bg-[var(--surface-hover)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--ring)]"
                   >
@@ -339,9 +372,13 @@ export function RoutineEditor({ routine }: { routine?: Routine }) {
                   <Plus aria-hidden="true" className="size-5" strokeWidth={1.75} />
                   Aggiungi serie
                 </Button>
+              </>
+              )}
+              </SortableItem>
               </li>
             ))}
           </ul>
+          </SortableList>
         )}
 
         <Button variant="secondary" block size="lg" onClick={() => setPicker(true)}>
@@ -379,6 +416,7 @@ export function RoutineEditor({ routine }: { routine?: Routine }) {
               sets: [{ type: "normal" as const }, { type: "normal" as const }, { type: "normal" as const }],
             })),
           ]);
+          setKeys((current) => [...current, ...picked.map(() => newId())]);
         }}
       />
 

@@ -24,12 +24,12 @@ const PLATE_FILL: Record<string, string> = {
 
 /** Colore dell'etichetta stampata sul disco: tutti ≥ 4,8:1 (§1.8). */
 const PLATE_LABEL: Record<string, string> = {
-  "20": "#FFFFFF",
-  "15": "var(--pr-on-fill)",
-  "10": "var(--pr-on-fill)",
-  "5": "var(--pr-on-fill)",
-  "2.5": "#FFFFFF",
-  "1.25": "var(--pr-on-fill)",
+  "20": "var(--plate-label-light)",
+  "15": "var(--plate-label-dark)",
+  "10": "var(--plate-label-dark)",
+  "5": "var(--plate-label-dark)",
+  "2.5": "var(--plate-label-light)",
+  "1.25": "var(--plate-label-dark)",
 };
 
 const PLATE_WIDTH = 14;

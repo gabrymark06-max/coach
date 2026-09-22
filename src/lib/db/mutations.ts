@@ -1,5 +1,6 @@
 import { elapsedSessionMs } from "@/lib/logic/timer";
 import { newId, nowIso, type LiftedDB } from "./db";
+import { computeSessionPRs, rebuildPersonalRecords } from "./pr-ops";
 import { previousSetsFor } from "./queries";
 import {
   DEFAULT_SETTINGS,
@@ -8,6 +9,7 @@ import {
   type Exercise,
   type ID,
   type MuscleGroup,
+  type PersonalRecord,
   type Routine,
   type RoutineExercise,
   type Session,
@@ -325,9 +327,20 @@ export async function buildSetsFromLibrary(
   }));
 }
 
-export async function finishSession(db: LiftedDB): Promise<Session | null> {
+export interface FinishedSession {
+  session: Session;
+  records: PersonalRecord[];
+}
+
+/**
+ * Chiude la sessione **e** rileva i record personali nella stessa transazione: o si
+ * salvano l'allenamento e i suoi PR, o non si salva niente. Un record senza la sessione
+ * che lo ha prodotto sarebbe un numero senza storia.
+ */
+export async function finishSession(db: LiftedDB): Promise<FinishedSession | null> {
   const endedAt = nowIso();
-  return db.transaction("rw", db.sessions, db.routines, async () => {
+  const settings = await ensureSettings(db);
+  return db.transaction("rw", db.sessions, db.routines, db.personalRecords, async () => {
     const current = await db.sessions.where("status").equals("active").first();
     if (!current) return null;
 
@@ -363,11 +376,18 @@ export async function finishSession(db: LiftedDB): Promise<Session | null> {
       restPausedMs: 0,
     });
 
-    await db.sessions.put(finished);
-    if (finished.routineId) {
-      await db.routines.update(finished.routineId, { lastPerformedAt: endedAt });
+    const { session: withPrIds, records } = await computeSessionPRs(
+      db,
+      finished,
+      settings.e1rmFormula,
+    );
+
+    await db.sessions.put(withPrIds);
+    if (records.length > 0) await db.personalRecords.bulkAdd(records);
+    if (withPrIds.routineId) {
+      await db.routines.update(withPrIds.routineId, { lastPerformedAt: endedAt });
     }
-    return finished;
+    return { session: withPrIds, records };
   });
 }
 
@@ -379,8 +399,25 @@ export async function discardSession(db: LiftedDB): Promise<void> {
   });
 }
 
+/**
+ * Elimina un allenamento dallo storico e **ricalcola i record** degli esercizi che
+ * conteneva: volume, serie e PR calcolati da quella sessione non possono sopravviverle
+ * (§5.2, "verranno ricalcolati").
+ */
 export async function deleteSession(db: LiftedDB, id: ID): Promise<void> {
-  await db.sessions.delete(id);
+  const settings = await ensureSettings(db);
+  const session = await db.sessions.get(id);
+  if (!session) return;
+  const exerciseIds = [...new Set(session.exercises.map((item) => item.exerciseId))];
+
+  await db.transaction("rw", db.sessions, db.personalRecords, async () => {
+    await db.personalRecords.where("sessionId").equals(id).delete();
+    await db.sessions.delete(id);
+  });
+
+  if (exerciseIds.length > 0) {
+    await rebuildPersonalRecords(db, settings.e1rmFormula, exerciseIds);
+  }
 }
 
 // ---------------------------------------------------------------- timer

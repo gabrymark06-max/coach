@@ -1,18 +1,11 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/shared/page-header";
-import { Soon } from "@/components/shared/soon";
+import { MisureView } from "./misure-view";
 
-export const metadata: Metadata = { title: "Misure" };
+export const metadata: Metadata = {
+  title: "Misure",
+  description: "Peso corporeo, massa grassa e circonferenze, con l'andamento nel tempo.",
+};
 
 export default function MisurePage() {
-  return (
-    <>
-      <PageHeader title="Misure" />
-      <Soon
-        icon="ruler"
-        title="Nessuna misurazione"
-        line="Qui registrerai peso, massa grassa e circonferenze, con l'andamento nel tempo."
-      />
-    </>
-  );
+  return <MisureView />;
 }

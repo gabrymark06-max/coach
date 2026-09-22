@@ -10,10 +10,13 @@ import { Button } from "@/components/ui/button";
 import { getDb } from "@/lib/db/db";
 import { getRoutine } from "@/lib/db/queries";
 import { useLiveData } from "@/lib/hooks/use-live-data";
+import { useRouteId } from "@/lib/hooks/use-route-id";
 
 export function ModificaRoutineView() {
   const params = useParams<{ id: string }>();
-  const state = useLiveData(() => getRoutine(getDb(), params.id), [params.id]);
+  // l'id vero viene dall'indirizzo: offline si atterra sulla scocca (route-shell)
+  const id = useRouteId(params.id);
+  const state = useLiveData(() => getRoutine(getDb(), id), [id]);
 
   return (
     <>

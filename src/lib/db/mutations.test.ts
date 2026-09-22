@@ -158,7 +158,7 @@ describe("chiusura della sessione", () => {
       ),
     );
 
-    const finished = await finishSession(db);
+    const finished = (await finishSession(db))?.session;
     expect(finished?.status).toBe("completed");
     expect(finished?.totalVolumeKg).toBe(640);
     expect(finished?.totalSets).toBe(1);

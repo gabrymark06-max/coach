@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatExerciseCount, formatRelativeDay } from "@/lib/format";
 import { useMounted } from "@/lib/hooks/use-now";
 
@@ -100,6 +101,35 @@ export function RoutineCard({
         <Button onClick={onStart} disabled={empty} className="h-12 px-5">
           AVVIA
         </Button>
+      </div>
+    </article>
+  );
+}
+
+/**
+ * Lo scheletro della card, **con la stessa struttura della card vera**.
+ *
+ * Non e' un rettangolo di altezza indovinata: e' lo stesso guscio con dentro dei blocchi
+ * grigi, quindi l'altezza coincide per costruzione e non c'e' salto di layout quando il
+ * dato arriva. (Il primo intervento misurava 0,0414 di CLS su `/allenamento` proprio per
+ * questo: skeleton da 88px, card da 172.)
+ */
+export function RoutineCardSkeleton() {
+  return (
+    <article
+      aria-hidden="true"
+      className="flex min-h-22 flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-5 shadow-[var(--elev-1)]"
+    >
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <Skeleton className="h-6 w-2/3 rounded-[var(--radius-sm)]" />
+          <Skeleton className="mt-1 h-5 w-full rounded-[var(--radius-sm)]" />
+          <Skeleton className="mt-1 h-5 w-1/3 rounded-[var(--radius-sm)]" />
+        </div>
+        <div className="size-12 shrink-0" />
+      </div>
+      <div className="flex items-center justify-end gap-3">
+        <Skeleton className="h-12 w-28 rounded-[var(--radius-btn)]" />
       </div>
     </article>
   );

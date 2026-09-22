@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { chiudiAvvisoIniziale } from "./helpers";
 
 /**
  * Il flusso principale percorso davvero: crea routine → avvia sessione → compila tre
@@ -7,6 +8,8 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 async function attendiLibreria(page: Page) {
+  await page.goto("/allenamento");
+  await chiudiAvvisoIniziale(page);
   await page.goto("/esercizi");
   // primo avvio del server: la prima navigazione puo' essere lenta
   await expect(page.getByRole("heading", { name: "Esercizi", level: 1 })).toBeVisible({

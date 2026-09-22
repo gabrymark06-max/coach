@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, CheckCircle2, MoreVertical, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, MoreVertical, Plus, Repeat2 } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +33,9 @@ export interface ExerciseCardProps {
   onNotes: (notes: string) => void;
   onWarmup: () => void;
   onPlates: (weightKg: number | null) => void;
+  onReplace?: () => void;
+  /** maniglia di trascinamento, fornita dalla lista ordinabile */
+  dragHandle?: React.ReactNode;
   errorBySetId?: Record<string, string>;
 }
 
@@ -61,6 +64,8 @@ export function ExerciseCard({
   onNotes,
   onWarmup,
   onPlates,
+  onReplace,
+  dragHandle,
   errorBySetId,
 }: ExerciseCardProps) {
   const [notesOpen, setNotesOpen] = React.useState(Boolean(exercise.notes));
@@ -77,6 +82,7 @@ export function ExerciseCard({
       className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] px-2 pt-5 pb-2 shadow-[var(--elev-1)]"
     >
       <header className="flex items-start gap-2 px-1">
+        {dragHandle}
         <div className="min-w-0 flex-1">
           <h2 id={headingId} className="flex items-center gap-2 text-h2 text-[var(--text-primary)]">
             {allDone ? (
@@ -116,6 +122,11 @@ export function ExerciseCard({
             <DropdownMenuItem onSelect={() => onPlates(firstWorkingWeight)}>
               Calcola dischi
             </DropdownMenuItem>
+            {onReplace ? (
+              <DropdownMenuItem onSelect={onReplace}>
+                <Repeat2 aria-hidden="true" /> Sostituisci esercizio
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled={index === 0} onSelect={() => onMove(-1)}>
               <ArrowUp aria-hidden="true" /> Sposta su

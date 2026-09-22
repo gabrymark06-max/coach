@@ -14,30 +14,53 @@ import { deleteExercise } from "@/lib/db/mutations";
 import { completedSetsHistory, getExercise } from "@/lib/db/queries";
 import { EQUIPMENT_LABEL, MUSCLE_GROUP_LABEL } from "@/lib/db/schema";
 import { formatDay, formatKgValue } from "@/lib/format";
+import {
+  ChartDataTable,
+  ChartEmpty,
+  ChartFrame,
+  ChartSinglePoint,
+  ChartSkeleton,
+  type SeriesDef,
+} from "@/components/charts/chart-card";
+import { TrendChart } from "@/components/charts/dynamic";
+import { PRSummary } from "@/components/shared/pr-badge";
+import { personalRecordsForExercise } from "@/lib/db/pr-ops";
+import { e1rmSeries } from "@/lib/logic/stats";
+import { formatFull } from "@/lib/format";
 import { useLiveData } from "@/lib/hooks/use-live-data";
+import { useRouteId } from "@/lib/hooks/use-route-id";
 import { useMounted } from "@/lib/hooks/use-now";
 import { bestE1rm } from "@/lib/logic/e1rm";
 import { useSettings } from "@/lib/session-context";
 
 /**
- * Dettaglio esercizio.
+ * Dettaglio esercizio: record, andamento del 1RM stimato, serie registrate.
  *
- * Lo storico c'e' quando esiste davvero: senza sessioni registrate si mostra lo stato
- * vuoto di §4.15 ("Mai allenato"), non un grafico finto. I grafici arrivano nel secondo
- * passaggio; l'1RM stimato invece e' gia' un numero vero.
+ * Lo storico c'e' quando esiste davvero: senza sessioni si mostra lo stato vuoto di
+ * §4.15 ("Mai allenato"), non un grafico finto. Con un solo allenamento si mostra il
+ * punto singolo, non una linea inventata (§4.10).
  */
+const SERIE_1RM: SeriesDef[] = [
+  { key: "value", name: "1RM stimato", color: "var(--chart-2)", shape: "diamond" },
+];
+
 export function DettaglioEsercizioView() {
   const params = useParams<{ id: string }>();
+  // l'id vero viene dall'indirizzo: offline si atterra sulla scocca (route-shell)
+  const id = useRouteId(params.id);
   const router = useRouter();
   const settings = useSettings();
+  const formula = settings.e1rmFormula;
   const mounted = useMounted();
   const [deleting, setDeleting] = React.useState(false);
 
-  const state = useLiveData(() => getExercise(getDb(), params.id), [params.id]);
-  const history = useLiveData(
-    () => completedSetsHistory(getDb(), params.id),
-    [params.id],
-  );
+  const state = useLiveData(() => getExercise(getDb(), id), [id]);
+  const history = useLiveData(() => completedSetsHistory(getDb(), id), [id]);
+  const records = useLiveData(() => personalRecordsForExercise(getDb(), id), [id]);
+  const trend = useLiveData(async () => {
+    const sessions = await getDb().sessions.where("exerciseIds").equals(id).toArray();
+    return e1rmSeries(sessions, id, formula);
+  }, [id, formula]);
 
   const best = React.useMemo(
     () => bestE1rm(history.data ?? [], settings.e1rmFormula),
@@ -119,6 +142,60 @@ export function DettaglioEsercizioView() {
                 </p>
               ) : null}
 
+              {(records.data ?? []).length > 0 ? (
+                <section aria-labelledby="titolo-record" className="flex flex-col gap-3">
+                  <h2 id="titolo-record" className="text-h2 text-[var(--text-primary)]">
+                    Record personali
+                  </h2>
+                  <PRSummary records={records.data ?? []} />
+                </section>
+              ) : null}
+
+              <ChartFrame
+                title="1RM stimato"
+                titleId="titolo-1rm"
+                subtitle={`Formula ${formula === "epley" ? "Epley" : "Brzycki"}, la serie migliore di ogni allenamento.`}
+              >
+                {trend.status === "loading" ? (
+                  <ChartSkeleton />
+                ) : trend.status === "error" || !trend.data ? (
+                  <ChartEmpty line="Non riesco a calcolare l'andamento di questo esercizio." />
+                ) : trend.data.length === 0 ? (
+                  <ChartEmpty line="Quando userai questo esercizio, qui vedrai il tuo 1RM stimato." />
+                ) : trend.data.length === 1 ? (
+                  <ChartSinglePoint
+                    value={`${formatKgValue(trend.data[0].value)} kg`}
+                    label={mounted ? formatDay(trend.data[0].date) : "—"}
+                    hint="Serve un secondo allenamento per tracciare una linea."
+                  />
+                ) : (
+                  <>
+                    <TrendChart
+                      data={trend.data.map((point) => ({
+                        date: point.date,
+                        value: point.value,
+                      }))}
+                      series={SERIE_1RM}
+                      xKey="date"
+                      yUnit="kg"
+                      formatX={(value) => formatDay(value)}
+                      formatTooltipLabel={(value) => formatFull(value)}
+                      formatValue={(value) => `${formatKgValue(value)} kg`}
+                      ariaLabel={`Andamento del 1RM stimato di ${exercise.name}`}
+                    />
+                    <ChartDataTable
+                      caption={`1RM stimato di ${exercise.name}`}
+                      columns={["Data", "1RM stimato (kg)", "Serie migliore"]}
+                      rows={trend.data.map((point) => [
+                        mounted ? formatDay(point.date) : point.date,
+                        formatKgValue(point.value),
+                        `${formatKgValue(point.weightKg)} kg × ${point.reps}`,
+                      ])}
+                    />
+                  </>
+                )}
+              </ChartFrame>
+
               <section aria-labelledby="titolo-storico" className="flex flex-col gap-4">
                 <h2 id="titolo-storico" className="text-h2 text-[var(--text-primary)]">
                   Storico
@@ -154,8 +231,7 @@ export function DettaglioEsercizioView() {
                       ) : null}
 
                       <p className="text-sm text-[var(--text-muted)]">
-                        {rows.length} serie registrate. I grafici arrivano nel prossimo
-                        passaggio.
+                        {rows.length} serie registrate.
                       </p>
 
                       <ul className="flex flex-col">

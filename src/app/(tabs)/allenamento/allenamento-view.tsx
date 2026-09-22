@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
-import { RoutineCard } from "@/components/routine/routine-card";
+import { RoutineCard, RoutineCardSkeleton } from "@/components/routine/routine-card";
 import { PageHeader } from "@/components/shared/page-header";
-import { Async, EmptyState, ListSkeleton } from "@/components/shared/states";
+import { Async, EmptyState } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,7 +80,15 @@ export function AllenamentoView() {
 
           <Async
             state={routines}
-            loading={<ListSkeleton rows={3} height={88} />}
+            loading={
+              <ul className="flex flex-col gap-4 md:grid md:grid-cols-2">
+                {[0, 1, 2].map((row) => (
+                  <li key={row}>
+                    <RoutineCardSkeleton />
+                  </li>
+                ))}
+              </ul>
+            }
             isEmpty={(data) => data.length === 0}
             empty={
               <EmptyState
@@ -155,7 +163,20 @@ function QuickStart({ onStartEmpty }: { onStartEmpty: () => void }) {
   const now = useNow(1000, Boolean(active));
 
   if (status === "loading") {
-    return <Skeleton className="h-24" />;
+    // Stesso guscio della card, non un rettangolo di altezza indovinata: e' cosi' che
+    // il CLS di questa schermata va a zero.
+    return (
+      <section
+        aria-hidden="true"
+        className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--card)] p-5 shadow-[var(--elev-1)]"
+      >
+        <Skeleton className="h-6 w-40 rounded-[var(--radius-sm)]" />
+        <div className="mt-4">
+          <Skeleton className="h-14 w-full rounded-[var(--radius-btn)]" />
+        </div>
+        <Skeleton className="mt-3 h-5 w-52 rounded-[var(--radius-sm)]" />
+      </section>
+    );
   }
 
   return (

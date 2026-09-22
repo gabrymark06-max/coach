@@ -116,6 +116,36 @@ export function moveExercise(
   });
 }
 
+/**
+ * `Sostituisci esercizio` (§6.2): si cambia l'esercizio **tenendo il posto e la forma**
+ * dell'allenamento — stesso numero di serie, stessi tipi, stessa posizione nella lista.
+ *
+ * I valori inseriti si azzerano di proposito: 80 kg di panca non sono 80 kg di croci, e
+ * lasciarli li' sarebbe un dato sbagliato gia' scritto. Al loro posto entra la serie
+ * "volta scorsa" del nuovo esercizio, che e' l'informazione utile.
+ */
+export function replaceExercise(
+  session: Session,
+  sessionExerciseId: ID,
+  input: Omit<NewExerciseInput, "sets"> & { previous?: NewSetInput[] },
+): Session {
+  return mapExercise(session, sessionExerciseId, (exercise) => ({
+    ...exercise,
+    exerciseId: input.exerciseId,
+    exerciseName: input.exerciseName,
+    equipment: input.equipment,
+    restSec: input.restSec,
+    notes: input.notes,
+    sets: exercise.sets.map((set, i) =>
+      makeSet(i + 1, {
+        type: set.type,
+        prevWeightKg: input.previous?.[i]?.prevWeightKg ?? null,
+        prevReps: input.previous?.[i]?.prevReps ?? null,
+      }),
+    ),
+  }));
+}
+
 export function replaceExerciseNotes(
   session: Session,
   sessionExerciseId: ID,

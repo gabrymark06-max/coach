@@ -1,19 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
-
-/**
- * axe calcola il colore **compositato**: se misura durante una dissolvenza di ingresso
- * vede un contrasto che non esiste. Si aspetta la fine delle animazioni.
- */
-async function animazioniFinite(page: Page) {
-  await page.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .map((animation) => animation.finished.catch(() => undefined)),
-    ),
-  );
-}
+import { expect, test } from "@playwright/test";
+import { animazioniFinite, chiudiAvvisoIniziale, preparaApp } from "./helpers";
 
 const ROTTE = [
   "/allenamento",
@@ -22,13 +9,14 @@ const ROTTE = [
   "/esercizi/nuovo",
   "/profilo",
   "/misure",
+  "/misure/bodyweight",
   "/statistiche",
+  "/impostazioni",
+  "/impostazioni/backup",
+  "/impostazioni/info",
 ];
 
-async function preparaDati(page: Page) {
-  await page.goto("/esercizi");
-  await expect(page.getByText(/^\d+ esercizi$/)).toBeVisible({ timeout: 15_000 });
-}
+const preparaDati = preparaApp;
 
 test("nessuno scroll orizzontale su nessuna rotta", async ({ page }, testInfo) => {
   await preparaDati(page);
@@ -68,6 +56,7 @@ test("i bersagli della sessione rispettano i 48px", async ({ page }) => {
 
 test("la navigazione diventa un rail laterale da 1024px", async ({ page }, testInfo) => {
   await page.goto("/allenamento");
+  await chiudiAvvisoIniziale(page);
   const nav = page.getByRole("navigation", { name: "Navigazione principale" });
   const box = await nav.boundingBox();
   expect(box).not.toBeNull();

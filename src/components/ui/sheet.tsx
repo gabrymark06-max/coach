@@ -24,9 +24,15 @@ export const SheetContent = React.forwardRef<
     description?: string;
     /** Nasconde il titolo visivamente ma lo lascia allo screen reader. */
     hideTitle?: boolean;
+    /**
+     * Toglie la `X`. Si usa **solo** dove il foglio deve essere letto e chiuso da un
+     * pulsante che dice cosa fa (l'avviso del primo avvio, §5.1). `Esc` continua a
+     * funzionare: chiudere deve restare sempre possibile.
+     */
+    hideClose?: boolean;
   }
 >(function SheetContent(
-  { className, children, title, description, hideTitle, ...props },
+  { className, children, title, description, hideTitle, hideClose, ...props },
   ref,
 ) {
   return (
@@ -74,12 +80,14 @@ export const SheetContent = React.forwardRef<
               </DialogPrimitive.Description>
             )}
           </div>
+          {hideClose ? null : (
           <DialogPrimitive.Close
             aria-label="Chiudi"
             className="-mr-2 -mt-2 inline-flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-btn)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
           >
             <X aria-hidden="true" className="size-6" strokeWidth={1.75} />
           </DialogPrimitive.Close>
+          )}
         </div>
         <div data-scroll-area="" className="mt-5 min-h-0 flex-1 overflow-y-auto">
           {children}

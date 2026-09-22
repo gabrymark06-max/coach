@@ -150,7 +150,9 @@ export interface PersonalRecord {
   sessionId: ID;
   setId: ID;
   achievedAt: ISODate;
+  /** il record che questo ha battuto: serve per dire "112 kg, +4 sul record" */
   previousValue?: number;
+  previousAchievedAt?: ISODate;
 }
 
 export interface MeasurementEntry {
@@ -220,6 +222,52 @@ export const EQUIPMENT_LABEL: Record<Equipment, string> = {
   machine: "Macchinario",
   bodyweight: "Corpo libero",
   other: "Altro",
+};
+
+export const METRIC_LABEL: Record<MetricKey, string> = {
+  bodyweight: "Peso corporeo",
+  bodyfat: "Massa grassa",
+  arm: "Braccia",
+  chest: "Torace",
+  waist: "Vita",
+  hips: "Fianchi",
+  thigh: "Cosce",
+  calf: "Polpacci",
+};
+
+export const METRIC_UNIT: Record<MetricKey, "kg" | "%" | "cm"> = {
+  bodyweight: "kg",
+  bodyfat: "%",
+  arm: "cm",
+  chest: "cm",
+  waist: "cm",
+  hips: "cm",
+  thigh: "cm",
+  calf: "cm",
+};
+
+/** Ordine in cui le metriche compaiono nella tab Misure: prima il corpo, poi le parti. */
+export const METRIC_ORDER: readonly MetricKey[] = [
+  "bodyweight",
+  "bodyfat",
+  "arm",
+  "chest",
+  "waist",
+  "hips",
+  "thigh",
+  "calf",
+];
+
+/** Limiti di validazione, per metrica (§5.3: ogni errore dice cosa fare). */
+export const METRIC_RANGE: Record<MetricKey, { min: number; max: number }> = {
+  bodyweight: { min: 20, max: 400 },
+  bodyfat: { min: 1, max: 70 },
+  arm: { min: 10, max: 100 },
+  chest: { min: 40, max: 200 },
+  waist: { min: 40, max: 200 },
+  hips: { min: 40, max: 200 },
+  thigh: { min: 20, max: 120 },
+  calf: { min: 15, max: 80 },
 };
 
 export const SET_TYPE_LABEL: Record<SetType, string> = {

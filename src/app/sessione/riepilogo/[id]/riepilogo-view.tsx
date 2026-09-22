@@ -2,34 +2,84 @@
 
 import { History } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
+import * as React from "react";
+import { SessionDetail } from "@/components/history/session-detail";
 import { Async, EmptyState, ListSkeleton } from "@/components/shared/states";
+import { prSpokenLabel, sortByKind } from "@/components/shared/pr-badge";
 import { Button } from "@/components/ui/button";
+import { announce } from "@/lib/announce";
 import { getDb } from "@/lib/db/db";
+import { personalRecordsForSession } from "@/lib/db/pr-ops";
 import { getSession } from "@/lib/db/queries";
-import { SET_TYPE_LABEL } from "@/lib/db/schema";
-import { formatFull, formatKgValue, formatVolumeKg } from "@/lib/format";
+import { formatFull } from "@/lib/format";
 import { useLiveData } from "@/lib/hooks/use-live-data";
 import { useMounted } from "@/lib/hooks/use-now";
-import { formatMinutes } from "@/lib/logic/timer";
+import { useRouteId } from "@/lib/hooks/use-route-id";
+import { useSettings } from "@/lib/session-context";
 
 /**
  * Riepilogo post-workout (§6.2).
  *
- * I record personali arrivano nel secondo passaggio: qui non c'e' un badge PR finto,
- * c'e' quello che l'app sa davvero — durata, volume, serie, esercizi.
+ * I record conquistati stanno in cima, pieni e animati una volta sola, e vengono
+ * **annunciati** nella regione `#sr-pr` (§8.5) — con `prefers-reduced-motion`
+ * l'animazione sparisce, l'annuncio no.
  */
 export function RiepilogoView() {
   const params = useParams<{ id: string }>();
+  const id = useRouteId(params.id);
   const router = useRouter();
   const mounted = useMounted();
-  const state = useLiveData(() => getSession(getDb(), params.id), [params.id]);
+  const settings = useSettings();
+
+  const state = useLiveData(
+    async () => {
+      if (!id) return null;
+      const db = getDb();
+      const [session, records] = await Promise.all([
+        getSession(db, id),
+        personalRecordsForSession(db, id),
+      ]);
+      if (!session) return null;
+      const names = await db.exercises.bulkGet([
+        ...new Set(records.map((record) => record.exerciseId)),
+      ]);
+      const nameById = new Map<string, string>();
+      for (const exercise of names) {
+        if (exercise) nameById.set(exercise.id, exercise.name);
+      }
+      for (const exercise of session.exercises) {
+        if (!nameById.has(exercise.exerciseId)) {
+          nameById.set(exercise.exerciseId, exercise.exerciseName);
+        }
+      }
+      return { session, records, nameById };
+    },
+    [id],
+  );
+
+  const records = state.status === "ready" ? state.data?.records : undefined;
+  const nameById = state.status === "ready" ? state.data?.nameById : undefined;
+  const announced = React.useRef(false);
+
+  React.useEffect(() => {
+    if (announced.current || !records || records.length === 0 || !nameById) return;
+    announced.current = true;
+    announce(
+      "pr",
+      sortByKind(records)
+        .map((record) =>
+          prSpokenLabel(record, nameById.get(record.exerciseId) ?? "esercizio"),
+        )
+        .join(" "),
+    );
+  }, [records, nameById]);
 
   return (
     <div className="app-container flex flex-col gap-6 py-11">
       <Async
         state={state}
         loading={<ListSkeleton rows={3} height={96} />}
-        isEmpty={(session) => session === undefined}
+        isEmpty={(data) => data === null}
         empty={
           <EmptyState
             icon={History}
@@ -42,69 +92,26 @@ export function RiepilogoView() {
             }
           />
         }
+        errorDetail="Non riesco a leggere questo allenamento su questo dispositivo."
       >
-        {(session) =>
-          session ? (
+        {(data) =>
+          data ? (
             <>
               <header>
                 <h1 className="text-h1 text-[var(--text-primary)]">Allenamento salvato</h1>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  {session.routineName ? `${session.routineName} · ` : null}
-                  {mounted ? formatFull(session.startedAt) : null}
+                  {data.session.routineName ? `${data.session.routineName} · ` : null}
+                  {mounted ? formatFull(data.session.startedAt) : null}
                 </p>
               </header>
 
-              <dl className="grid grid-cols-3 gap-3">
-                {[
-                  ["Durata", formatMinutes(session.durationSec * 1000)],
-                  ["Volume", formatVolumeKg(session.totalVolumeKg)],
-                  ["Serie", String(session.totalSets)],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-4"
-                  >
-                    <dt className="text-label text-[var(--text-secondary)]">{label}</dt>
-                    <dd className="tnum mt-1 text-h2 text-[var(--text-primary)]">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-
-              {session.exercises.length === 0 ? (
-                <p className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-strong)] p-8 text-center text-base text-[var(--text-secondary)]">
-                  Nessuna serie completata in questo allenamento.
-                </p>
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {session.exercises.map((exercise) => (
-                    <li
-                      key={exercise.id}
-                      className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--card)] p-4"
-                    >
-                      <h2 className="break-words text-h3 text-[var(--text-primary)]">
-                        {exercise.exerciseName}
-                      </h2>
-                      <ul className="mt-2 flex flex-wrap gap-2">
-                        {exercise.sets.map((set, i) => (
-                          <li
-                            key={set.id}
-                            className="tnum rounded-[var(--radius-sm)] bg-[var(--popover)] px-2 py-1 text-sm text-[var(--text-secondary)]"
-                          >
-                            <span translate="no">
-                              {set.type === "normal" ? i + 1 : SET_TYPE_LABEL[set.type][0]}
-                            </span>
-                            {" · "}
-                            {set.weightKg != null ? `${formatKgValue(set.weightKg)} kg` : "—"}
-                            {" × "}
-                            {set.reps ?? "—"}
-                            {set.rpe != null ? ` · RPE ${formatKgValue(set.rpe)}` : null}
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <SessionDetail
+                session={data.session}
+                records={data.records}
+                nameById={data.nameById}
+                fresh
+                formula={settings.e1rmFormula}
+              />
 
               <Button size="lg" block onClick={() => router.replace("/allenamento")}>
                 Fatto

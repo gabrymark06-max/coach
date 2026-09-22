@@ -15,16 +15,19 @@ import { getRoutine } from "@/lib/db/queries";
 import { SET_TYPE_LABEL } from "@/lib/db/schema";
 import { formatExerciseCount, formatKgValue } from "@/lib/format";
 import { useLiveData } from "@/lib/hooks/use-live-data";
+import { useRouteId } from "@/lib/hooks/use-route-id";
 
 export function DettaglioRoutineView() {
   const params = useParams<{ id: string }>();
+  // l'id vero viene dall'indirizzo: offline si atterra sulla scocca (route-shell)
+  const id = useRouteId(params.id);
   const router = useRouter();
-  const state = useLiveData(() => getRoutine(getDb(), params.id), [params.id]);
+  const state = useLiveData(() => getRoutine(getDb(), id), [id]);
 
   const start = async () => {
     unlockAudio();
     try {
-      await startSession(getDb(), { routineId: params.id });
+      await startSession(getDb(), { routineId: id });
       markSessionEntry();
       router.push("/sessione");
     } catch (error) {

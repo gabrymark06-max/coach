@@ -8,6 +8,7 @@ import {
   patchSet,
   recalc,
   removeExercise,
+  replaceExercise,
   setDisplayNumber,
   toggleSetCompleted,
 } from "./session-ops";
@@ -223,5 +224,59 @@ describe("recalc", () => {
     expect(fixed.totalVolumeKg).toBe(0);
     expect(fixed.totalSets).toBe(0);
     expect(fixed.exerciseIds).toEqual(["lib-panca"]);
+  });
+});
+
+describe("replaceExercise", () => {
+  it("cambia l'esercizio tenendo posizione, numero e tipo delle serie", () => {
+    const session = withPanca();
+    const id = session.exercises[0].id;
+    const con = patchSet(session, id, session.exercises[0].sets[0].id, {
+      weightKg: 80,
+      reps: 8,
+    });
+
+    const dopo = replaceExercise(con, id, {
+      exerciseId: "lib-croci",
+      exerciseName: "Croci ai cavi",
+      equipment: "cable",
+      restSec: 60,
+      previous: [{ type: "normal", prevWeightKg: 12.5, prevReps: 12 }],
+    });
+
+    expect(dopo.exercises).toHaveLength(1);
+    expect(dopo.exercises[0].exerciseId).toBe("lib-croci");
+    expect(dopo.exercises[0].exerciseName).toBe("Croci ai cavi");
+    expect(dopo.exercises[0].order).toBe(0);
+    expect(dopo.exercises[0].sets).toHaveLength(2);
+    expect(dopo.exerciseIds).toEqual(["lib-croci"]);
+  });
+
+  it("azzera i valori inseriti: 80 kg di panca non sono 80 kg di croci", () => {
+    const session = withPanca();
+    const id = session.exercises[0].id;
+    const setId = session.exercises[0].sets[0].id;
+    const con = toggleSetCompleted(
+      patchSet(session, id, setId, { weightKg: 80, reps: 8 }),
+      id,
+      setId,
+      true,
+      NOW,
+    );
+    expect(con.totalVolumeKg).toBe(640);
+
+    const dopo = replaceExercise(con, id, {
+      exerciseId: "lib-croci",
+      exerciseName: "Croci ai cavi",
+      equipment: "cable",
+      restSec: 60,
+      previous: [{ type: "normal", prevWeightKg: 12.5, prevReps: 12 }],
+    });
+
+    expect(dopo.exercises[0].sets[0].weightKg).toBeNull();
+    expect(dopo.exercises[0].sets[0].reps).toBeNull();
+    expect(dopo.exercises[0].sets[0].completed).toBe(false);
+    expect(dopo.exercises[0].sets[0].prevWeightKg).toBe(12.5);
+    expect(dopo.totalVolumeKg).toBe(0);
   });
 });

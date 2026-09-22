@@ -70,6 +70,9 @@
   --plate-20: #1268EC; --plate-15: #FFB020; --plate-10: #32D74B;
   --plate-5:  #F2F4F7; --plate-2_5: #D92D24; --plate-1_25: #A9B2C1;
   --plate-bar: #666D82;
+  /* etichetta stampata sul disco: chiara sui dischi scuri, scura su quelli chiari (§1.8) */
+  --plate-label-light: #FFFFFF;
+  --plate-label-dark:  #0B0C0E;
 
   --space-1: 2px;  --space-2: 4px;  --space-3: 8px;  --space-4: 12px;
   --space-5: 16px; --space-6: 20px; --space-7: 24px; --space-8: 32px;
@@ -493,4 +496,10 @@
 @keyframes lifted-pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.03); }
+}
+
+/* Ingresso del badge PR appena conquistato (§4.5): una volta sola, solo scale+opacity. */
+@keyframes lifted-pr-in {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
