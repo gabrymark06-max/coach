@@ -1,0 +1,496 @@
+@import "tailwindcss";
+
+/* =============================================================
+   Lifted — token del design system (docs/design-system.md §2.1)
+   Un hex grezzo o un px magico dentro un componente e' un bug.
+   ============================================================= */
+
+:root {
+  color-scheme: dark;
+
+  /* --- shadcn / Radix (tema scuro unico, valori esadecimali diretti) --- */
+  --background:            #0B0C0E;
+  --foreground:            #F2F4F7;
+  --card:                  #16181D;
+  --card-foreground:       #F2F4F7;
+  --popover:               #1F222A;
+  --popover-foreground:    #F2F4F7;
+  --primary:               #1268EC;
+  --primary-foreground:    #FFFFFF;
+  --secondary:             #1F222A;
+  --secondary-foreground:  #F2F4F7;
+  --muted:                 #1F222A;
+  --muted-foreground:      #A9B2C1;
+  --accent:                #262A34;
+  --accent-foreground:     #F2F4F7;
+  --destructive:           #D92D24;
+  --destructive-foreground:#FFFFFF;
+  --border:                #2A2E39;
+  --input:                 #0F1115;
+  --ring:                  #6FB4FF;
+  --radius:                0.625rem; /* 10px */
+
+  --chart-1: #3E96FF;  --chart-2: #FFB020;  --chart-3: #32D74B;
+  --chart-4: #C77DFF;  --chart-5: #FF8A5B;  --chart-6: #5EE0D0;
+
+  /* --- token propri di Lifted --- */
+  --surface-hover:  #262A34;
+  --border-strong:  #666D82;
+  --text-primary:   #F2F4F7;
+  --text-secondary: #A9B2C1;
+  --text-muted:     #838FA4;
+  --text-disabled:  #5C6274;
+
+  --blue-brand:     #007AFF;
+  --primary-hover:  #0F5ED8;
+  --primary-active: #0B57C9;
+  --accent-blue:    #3E96FF;
+
+  --set-done-surface: #10243C;
+  --set-normal:  #F2F4F7;
+  --set-warmup:  #FFB020;
+  --set-drop:    #C77DFF;
+  --set-failure: #FF6259;
+
+  --pr:         #FFB020;
+  --pr-surface: #2E2208;
+  --pr-border:  #6B4F12;
+  --pr-on-fill: #0B0C0E;
+  --success:    #32D74B;
+  --danger:     #FF6259;
+  --danger-fill:#D92D24;
+  --danger-hover:#C2251D;
+  --danger-on-fill: #FFFFFF;
+  --warning:    #FFB020;
+  --overlay:    rgb(0 0 0 / 0.72);
+
+  --chart-grid: #2F3440;
+  --chart-axis: #A9B2C1;
+
+  --plate-20: #1268EC; --plate-15: #FFB020; --plate-10: #32D74B;
+  --plate-5:  #F2F4F7; --plate-2_5: #D92D24; --plate-1_25: #A9B2C1;
+  --plate-bar: #666D82;
+
+  --space-1: 2px;  --space-2: 4px;  --space-3: 8px;  --space-4: 12px;
+  --space-5: 16px; --space-6: 20px; --space-7: 24px; --space-8: 32px;
+  --space-9: 40px; --space-10: 48px; --space-11: 64px;
+
+  --radius-xs: 3px;  --radius-sm: 6px;  --radius-md: 10px;
+  --radius-btn: 12px; --radius-lg: 16px; --radius-full: 9999px;
+
+  --elev-1: inset 0 1px 0 rgb(255 255 255 / 0.04);
+  --elev-2: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 8px 24px rgb(0 0 0 / 0.60);
+  --elev-3: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 16px 48px rgb(0 0 0 / 0.78);
+  --glow-timer: 0 0 0 1px #007AFF, 0 6px 24px rgb(0 122 255 / 0.30);
+  --glow-pr:    0 0 0 1px #6B4F12, 0 6px 24px rgb(255 176 32 / 0.22);
+
+  --z-base: 0; --z-sticky: 10; --z-session-bar: 15; --z-nav: 20;
+  --z-timer: 30; --z-overlay: 40; --z-dialog: 50; --z-toast: 60;
+
+  --dur-1: 150ms; --dur-2: 200ms; --dur-3: 260ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in:  cubic-bezier(0.4, 0, 1, 1);
+  --ease-tap: cubic-bezier(0.34, 1.15, 0.64, 1);
+
+  --tap-min: 44px; --tap-gym: 48px;
+  --row-set: 52px; --row-list: 56px;
+  --nav-h: 56px;   --session-bar-h: 48px;
+  --session-header-h: 72px;
+  --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
+  --stroke-icon: 1.75;
+
+  /* incrementi (NumberField §4.18) — configurabili in Impostazioni */
+  --step-kg: 2.5; --step-kg-fine: 1.25; --step-reps: 1;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-brand: var(--blue-brand);
+  --color-accent-blue: var(--accent-blue);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+  --color-surface-hover: var(--surface-hover);
+  --color-card-elevated: var(--popover);
+  --color-set-done: var(--set-done-surface);
+  --color-set-normal: var(--set-normal);
+  --color-set-warmup: var(--set-warmup);
+  --color-set-drop: var(--set-drop);
+  --color-set-failure: var(--set-failure);
+  --color-pr: var(--pr);
+  --color-pr-surface: var(--pr-surface);
+  --color-pr-border: var(--pr-border);
+  --color-pr-on-fill: var(--pr-on-fill);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-danger-fill: var(--danger-fill);
+  --color-plate-bar: var(--plate-bar);
+
+  --color-chart-1: var(--chart-1); --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3); --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5); --color-chart-6: var(--chart-6);
+
+  --font-display: var(--font-archivo), "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --font-sans:    var(--font-public-sans), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+
+  --text-xs: 12px;   --text-xs--line-height: 16px;
+  --text-sm: 14px;   --text-sm--line-height: 20px;
+  --text-base: 16px; --text-base--line-height: 24px;
+  --text-lg: 18px;   --text-lg--line-height: 24px;
+  --text-xl: 22px;   --text-xl--line-height: 28px;
+  --text-2xl: 28px;  --text-2xl--line-height: 32px;
+  --text-3xl: 40px;  --text-3xl--line-height: 40px;
+
+  --spacing-1: 2px;  --spacing-2: 4px;  --spacing-3: 8px;  --spacing-4: 12px;
+  --spacing-5: 16px; --spacing-6: 20px; --spacing-7: 24px; --spacing-8: 32px;
+  --spacing-9: 40px; --spacing-10: 48px; --spacing-11: 64px;
+
+  --radius-xs: 3px; --radius-sm: 6px; --radius-md: 10px;
+  --radius-btn: 12px; --radius-lg: 16px;
+
+  --shadow-elev-1: var(--elev-1);
+  --shadow-elev-2: var(--elev-2);
+  --shadow-elev-3: var(--elev-3);
+  --shadow-glow-timer: var(--glow-timer);
+  --shadow-glow-pr: var(--glow-pr);
+
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1440px;
+}
+
+/* =============================================================
+   Base
+   ============================================================= */
+
+@layer base {
+  * {
+    border-color: var(--border);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    background-color: var(--background);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    overscroll-behavior-y: none;
+  }
+
+  /* §11.1 — niente ritardo da doppio tap sui bersagli */
+  button,
+  a,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label {
+    touch-action: manipulation;
+  }
+
+  [data-sheet],
+  [data-dialog],
+  [data-scroll-area] {
+    overscroll-behavior: contain;
+  }
+
+  /* §4.14 — l'anello di focus esiste sempre */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* §11.2 — il select nativo dell'RPE su Windows in tema scuro */
+  select {
+    background-color: var(--input);
+    color: var(--text-primary);
+  }
+
+  /* §11.3 — l'header sticky di sessione non copre le ancore */
+  :where(h1, h2, h3)[id] {
+    scroll-margin-top: calc(var(--session-header-h) + var(--space-5));
+  }
+}
+
+/* =============================================================
+   Utility
+   ============================================================= */
+
+@utility tnum {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* §4.14 press — mai un cambio di bounds */
+@utility press {
+  transition: transform var(--dur-1) var(--ease-tap),
+    background-color var(--dur-1) var(--ease-out);
+  transform-origin: center;
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+@utility text-display {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  line-height: var(--text-3xl--line-height);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+@utility text-h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+@utility text-h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: var(--text-xl--line-height);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+@utility text-h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: var(--text-lg--line-height);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+@utility text-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@utility text-num-set {
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+@utility text-num-md {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  line-height: var(--text-sm--line-height);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* §8.4 — skip link */
+@utility skip-link {
+  position: absolute;
+  left: var(--space-5);
+  top: var(--space-5);
+  z-index: var(--z-toast);
+  transform: translateY(-200%);
+  background-color: var(--popover);
+  color: var(--text-primary);
+  border: 2px solid var(--ring);
+  border-radius: var(--radius-btn);
+  padding: var(--space-4) var(--space-6);
+  &:focus {
+    transform: translateY(0);
+  }
+}
+
+/* Liste medie: evita il CLS e il costo di layout senza virtualizzatore (§11.6) */
+@utility list-cv {
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--row-list);
+}
+
+/* =============================================================
+   prefers-reduced-motion (§8.6)
+   Il reset globale non basta: le animazioni infinite vanno rimosse,
+   non accorciate — i componenti leggono anche il media query.
+   ============================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .press:active {
+    transform: none;
+    background-color: var(--surface-hover);
+  }
+}
+
+/* =============================================================
+   Movimento degli overlay (§4.16) — ingresso 260ms, uscita 150ms.
+   Solo transform e opacity. Il blocco reduced-motion piu' sopra
+   azzera le durate; qui restano le sole proprieta' ammesse.
+   ============================================================= */
+
+@keyframes lifted-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes lifted-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes lifted-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes lifted-sheet-out {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+[data-overlay][data-state="open"] {
+  animation: lifted-fade-in var(--dur-2) var(--ease-out);
+}
+[data-overlay][data-state="closed"] {
+  animation: lifted-fade-out var(--dur-1) var(--ease-in);
+}
+
+[data-sheet] {
+  transform-origin: bottom center;
+}
+[data-sheet][data-state="open"] {
+  animation: lifted-sheet-in var(--dur-3) var(--ease-out);
+}
+[data-sheet][data-state="closed"] {
+  animation: lifted-sheet-out var(--dur-1) var(--ease-in);
+}
+
+@media (min-width: 768px) {
+  /* da 768px il foglio e' un dialog centrato: entra in opacita', non dal basso */
+  [data-sheet][data-state="open"],
+  [data-sheet][data-state="closed"] {
+    animation-name: lifted-fade-in;
+  }
+  [data-sheet][data-state="closed"] {
+    animation-name: lifted-fade-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sheet][data-state="open"],
+  [data-sheet][data-state="closed"] {
+    animation-name: lifted-fade-in;
+  }
+}
+
+/* I popper di Radix (menu, popover) stanno sopra la nav e la pill del timer. */
+[data-radix-popper-content-wrapper] {
+  z-index: var(--z-dialog) !important;
+}
+
+/* =============================================================
+   Contenitore e imbottitura di pagina (§7)
+   Il contenuto non finisce mai sotto la nav o sotto la barra della
+   sessione: l'imbottitura le somma, e a 1024px la nav diventa rail.
+   ============================================================= */
+
+.app-container {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: var(--space-5);
+}
+
+.app-main {
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--space-5));
+  scroll-padding-bottom: 180px;
+}
+
+.app-main[data-session="true"] {
+  padding-bottom: calc(
+    var(--nav-h) + var(--session-bar-h) + env(safe-area-inset-bottom) + var(--space-5)
+  );
+}
+
+@media (min-width: 768px) {
+  .app-container {
+    max-width: 680px;
+    padding-inline: var(--space-7);
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-main,
+  .app-main[data-session="true"] {
+    padding-bottom: var(--space-9);
+  }
+}
+
+@media (min-width: 1440px) {
+  .app-container {
+    max-width: 1120px;
+    padding-inline: var(--space-9);
+  }
+}
+
+/* Pulsazione del punto "sessione in corso" e della pill negli ultimi 10 secondi.
+   Solo opacity e transform; sotto reduced-motion i componenti non la applicano. */
+@keyframes lifted-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@keyframes lifted-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
