@@ -4,6 +4,7 @@ import { History } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import * as React from "react";
 import { SessionDetail } from "@/components/history/session-detail";
+import { NextTimeCard } from "@/components/trainer/next-time-card";
 import { RouteMain } from "@/components/layout/route-main";
 import { Async, EmptyState, ListSkeleton } from "@/components/shared/states";
 import { prSpokenLabel, sortByKind } from "@/components/shared/pr-badge";
@@ -12,6 +13,7 @@ import { announce } from "@/lib/announce";
 import { getDb } from "@/lib/db/db";
 import { personalRecordsForSession } from "@/lib/db/pr-ops";
 import { getSession } from "@/lib/db/queries";
+import { decisionsFromSession } from "@/lib/db/trainer-ops";
 import { formatFull } from "@/lib/format";
 import { useLiveData } from "@/lib/hooks/use-live-data";
 import { useMounted } from "@/lib/hooks/use-now";
@@ -36,9 +38,10 @@ export function RiepilogoView() {
     async () => {
       if (!id) return null;
       const db = getDb();
-      const [session, records] = await Promise.all([
+      const [session, records, decisions] = await Promise.all([
         getSession(db, id),
         personalRecordsForSession(db, id),
+        decisionsFromSession(db, id),
       ]);
       if (!session) return null;
       const names = await db.exercises.bulkGet([
@@ -53,7 +56,7 @@ export function RiepilogoView() {
           nameById.set(exercise.exerciseId, exercise.exerciseName);
         }
       }
-      return { session, records, nameById };
+      return { session, records, nameById, decisions };
     },
     [id],
   );
@@ -123,7 +126,16 @@ export function RiepilogoView() {
                 formula={settings.e1rmFormula}
               />
 
-              <Button size="lg" block onClick={() => router.replace("/allenamento")}>
+              {/* §6.8 passo 3: il perche' del prossimo carico, subito dopo la fatica */}
+              <NextTimeCard decisions={data.decisions} />
+
+              <Button
+                size="lg"
+                block
+                onClick={() =>
+                  router.replace(data.session.trainerDayId ? "/trainer" : "/allenamento")
+                }
+              >
                 Fatto
               </Button>
             </>

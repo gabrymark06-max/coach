@@ -120,3 +120,43 @@ export async function animazioniFinite(page: Page) {
     ),
   );
 }
+
+/** Percorre il questionario dall'inizio alla fine. Sei schermate, sei risposte. */
+export async function rispondiAlQuestionario(
+  page: Page,
+  opzioni: { giorni?: string; livello?: RegExp } = {},
+) {
+  await page.goto("/trainer/questionario");
+
+  // 1 — obiettivo
+  await expect(page.getByText("Passo 1 di 6")).toBeVisible();
+  await page.getByRole("radio", { name: /Ipertrofia/ }).click();
+  await page.getByRole("button", { name: "Avanti" }).click();
+
+  // 2 — muscoli privilegiati (zero e' ammesso)
+  await expect(page.getByText("Passo 2 di 6")).toBeVisible();
+  await page.getByRole("button", { name: "Avanti" }).click();
+
+  // 3 — attrezzatura, dal preset
+  await expect(page.getByText("Passo 3 di 6")).toBeVisible();
+  await page.getByRole("button", { name: /Palestra completa/ }).click();
+  await page.getByRole("button", { name: "Avanti" }).click();
+
+  // 4 — livello
+  await expect(page.getByText("Passo 4 di 6")).toBeVisible();
+  await page.getByRole("radio", { name: opzioni.livello ?? /Intermedio/ }).click();
+  await page.getByRole("button", { name: "Avanti" }).click();
+
+  // 5 — giorni e durata, con lo split mostrato prima di generare
+  await expect(page.getByText("Passo 5 di 6")).toBeVisible();
+  await page.getByRole("radio", { name: opzioni.giorni ?? "4", exact: true }).click();
+  await expect(page.getByText(/Upper\/Lower/)).toBeVisible();
+  await page.getByRole("radio", { name: "60 min" }).click();
+  await page.getByRole("button", { name: "Avanti" }).click();
+
+  // 6 — riepilogo e generazione
+  await expect(page.getByText("Passo 6 di 6")).toBeVisible();
+  await expect(page.getByText("Palestra completa")).toBeVisible();
+  await page.getByRole("button", { name: "Genera il programma" }).click();
+  await expect(page).toHaveURL(/\/trainer$/, { timeout: 20_000 });
+}

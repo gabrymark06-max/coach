@@ -18,6 +18,8 @@ import {
 } from "./schema";
 import { recalc, type NewSetInput } from "./session-ops";
 import { ensureSettings } from "./seed";
+import { getDayRow, locate, progressAfterSession } from "./trainer-ops";
+import type { ProgressionDecision } from "./trainer-schema";
 
 /**
  * Scritture.
@@ -234,6 +236,13 @@ export interface StartSessionInput {
    * che si e' fatto la volta scorsa e' un suggerimento, non un dato da ri-salvare.
    */
   fromSessionId?: ID;
+  /**
+   * Il giorno del programma da cui parte la sessione (§4.24, «Avvio dell'allenamento
+   * dal Trainer»). Gli esercizi, le serie e **il carico consigliato** arrivano da li',
+   * e il carico entra nel campo **come valore**: il Trainer propone, quindi scrive.
+   * Una proposta che l'utente deve ridigitare non e' una proposta.
+   */
+  trainerDayId?: ID;
 }
 
 /**
@@ -248,6 +257,9 @@ export async function startSession(
   const routine = input.routineId ? await db.routines.get(input.routineId) : undefined;
   const source = input.fromSessionId
     ? await db.sessions.get(input.fromSessionId)
+    : undefined;
+  const trainerDay = input.trainerDayId
+    ? await trainerDayPlan(db, input.trainerDayId)
     : undefined;
 
   /*
@@ -266,7 +278,7 @@ export async function startSession(
       }))
     : undefined;
 
-  const plan = routine?.exercises ?? template ?? [];
+  const plan = routine?.exercises ?? trainerDay?.exercises ?? template ?? [];
 
   // Le letture "volta scorsa" stanno fuori dalla transazione di scrittura: sono
   // indipendenti fra loro e si fanno in parallelo.
@@ -292,7 +304,8 @@ export async function startSession(
   const session: Session = recalc({
     id: newId(),
     routineId: routine?.id,
-    routineName: routine?.name ?? source?.routineName,
+    routineName: routine?.name ?? trainerDay?.name ?? source?.routineName,
+    trainerDayId: trainerDay?.id,
     startedAt,
     status: "active",
     pausedMs: 0,
@@ -370,6 +383,12 @@ export async function buildSetsFromLibrary(
 export interface FinishedSession {
   session: Session;
   records: PersonalRecord[];
+  /**
+   * Le decisioni che la progressione ha appena scritto (§6.8): sono quelle che il
+   * riepilogo mostra nella card «Cosa cambia la prossima volta». Vuoto quando la
+   * sessione non veniva dal Trainer.
+   */
+  decisions: ProgressionDecision[];
 }
 
 /**
@@ -380,7 +399,19 @@ export interface FinishedSession {
 export async function finishSession(db: LiftedDB): Promise<FinishedSession | null> {
   const endedAt = nowIso();
   const settings = await ensureSettings(db);
-  return db.transaction("rw", db.sessions, db.routines, db.personalRecords, async () => {
+  return db.transaction(
+    "rw",
+    [
+      db.sessions,
+      db.routines,
+      db.personalRecords,
+      db.exercises,
+      db.settings,
+      db.trainerPrograms,
+      db.trainerDays,
+      db.trainerDecisions,
+    ],
+    async () => {
     const current = await db.sessions.where("status").equals("active").first();
     if (!current) return null;
 
@@ -427,8 +458,17 @@ export async function finishSession(db: LiftedDB): Promise<FinishedSession | nul
     if (withPrIds.routineId) {
       await db.routines.update(withPrIds.routineId, { lastPerformedAt: endedAt });
     }
-    return { session: withPrIds, records };
-  });
+
+    /*
+      La progressione gira **qui dentro**, nella stessa transazione: il giorno si marca
+      da se', le decisioni della settimana dopo si scrivono, e se qualcosa fallisce non
+      resta un allenamento salvato con un programma rimasto indietro (§6.8).
+    */
+    const decisions = await progressAfterSession(db, withPrIds, endedAt);
+
+    return { session: withPrIds, records, decisions };
+    },
+  );
 }
 
 export async function discardSession(db: LiftedDB): Promise<void> {
@@ -562,4 +602,43 @@ export async function updateSettings(
  */
 function isBodyweightEquipment(equipment: Equipment): boolean {
   return EQUIPMENT_LOAD_MODE[equipment] !== undefined;
+}
+
+/**
+ * Il giorno del Trainer tradotto nel piano che `startSession` gia' sa costruire.
+ *
+ * `targetWeightKg` e' il carico consigliato, e finisce nel campo **come valore**
+ * (§10-bis passo 5). Le ripetizioni no: il Trainer prescrive un *intervallo*, e
+ * scrivere `6` in un campo dove l'utente ne fara' 8 sarebbe un numero da correggere,
+ * non un aiuto. L'intervallo si legge nelle note dell'esercizio, dove resta visibile
+ * per tutta la sessione.
+ */
+async function trainerDayPlan(
+  db: LiftedDB,
+  dayId: ID,
+): Promise<{ id: ID; name: string; exercises: RoutineExercise[] } | undefined> {
+  const row = await getDayRow(db, dayId);
+  if (!row) return undefined;
+  const program = await db.trainerPrograms.get(row.programId);
+  if (!program) return undefined;
+  const found = locate(program, dayId);
+  if (!found) return undefined;
+
+  return {
+    id: dayId,
+    name: found.day.name,
+    exercises: found.day.exercises.map((exercise, order) => ({
+      exerciseId: exercise.exerciseId,
+      exerciseName: exercise.exerciseName,
+      order,
+      notes: `Obiettivo ${exercise.sets} × ${exercise.repsMin}-${exercise.repsMax} a RPE ${exercise.rpeTarget}`,
+      restSec: exercise.restSec,
+      sets: Array.from({ length: exercise.sets }, () => ({
+        type: "normal" as const,
+        targetWeightKg: exercise.suggestedWeightKg,
+        targetReps: null,
+        targetRpe: null,
+      })),
+    })),
+  };
 }

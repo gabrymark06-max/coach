@@ -576,6 +576,19 @@
   50% { transform: scale(1.03); }
 }
 
+/* Passi del questionario del Trainer (§4.23): traslazione coerente col verso.
+   Solo transform e opacity; `--da` lo scrive il componente (+12px avanti,
+   -12px indietro). Con reduced-motion il componente non applica questa classe
+   e usa la sola dissolvenza. */
+@keyframes lifted-quiz-step {
+  from { transform: translateX(var(--da, 12px)); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+.quiz-step {
+  animation: lifted-quiz-step var(--dur-2) var(--ease-out);
+}
+
 /* Ingresso del badge PR appena conquistato (§4.5): una volta sola, solo scale+opacity. */
 @keyframes lifted-pr-in {
   from { transform: scale(0.9); opacity: 0; }

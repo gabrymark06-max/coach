@@ -179,9 +179,22 @@ export function replayPersonalRecords(
   formula: E1rmFormula,
   makeId: () => ID,
 ): PersonalRecord[] {
+  /*
+    L'ordine deve essere **totale**, non solo cronologico. Due allenamenti chiusi nello
+    stesso millisecondo esistono (li produce l'import di un backup, e li producono i
+    test) e con il solo `startedAt` la catena dei record verrebbe ricostruita
+    nell'ordine in cui IndexedDB restituisce le righe — cioe' in un ordine diverso a
+    ogni ricostruzione. `endedAt` e poi `id` chiudono il pareggio: il risultato e'
+    sempre lo stesso a parita' di storico, che e' l'unica cosa che qui conta.
+  */
   const ordered = sessions
     .filter((item) => item.status === "completed")
-    .toSorted((a, b) => a.startedAt.localeCompare(b.startedAt));
+    .toSorted(
+      (a, b) =>
+        a.startedAt.localeCompare(b.startedAt) ||
+        (a.endedAt ?? "").localeCompare(b.endedAt ?? "") ||
+        a.id.localeCompare(b.id),
+    );
 
   const baselines = new Map<string, PRBaseline>();
   const records: PersonalRecord[] = [];

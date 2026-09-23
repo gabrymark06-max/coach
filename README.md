@@ -26,7 +26,7 @@ Dexie.js · Recharts · dnd kit · Serwist
 | **Misure** | peso corporeo, massa grassa e sei circonferenze, con grafico di andamento per ciascuna |
 | **Backup** | export completo in JSON e CSV, ripristino da JSON in transazione |
 | **PWA** | installabile su iOS e Android, **funziona completamente offline** |
-| **Trainer** | *non ancora costruito*. La tab esiste e dice onestamente che cosa manca: è il secondo intervento della v2 |
+| **Trainer** | **programma generato e progressivo**: sei domande (obiettivo, muscoli, attrezzatura, livello, giorni, durata) e il Trainer costruisce un ciclo di 8 settimane con routine pronte per ogni giorno, scegliendo dalla libreria reale in base a quello che hai davvero. Dopo ogni allenamento **decide da solo il carico della volta dopo** e scrive *perché*: nove regole nominate, la riga del motivo sotto ogni carico, il foglio «Perché questo carico» con i numeri e le sessioni citate come link, e un registro filtrabile di tutte le decisioni |
 
 ---
 
@@ -59,8 +59,8 @@ oppure cancella i dati del sito dal browser.
 | `pnpm build` · `pnpm start` | build di produzione e server (porta 3000) |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm lint` | ESLint (config Next + regole React) |
-| `pnpm test` | unit test con Vitest (logica pura + strato Dexie su `fake-indexeddb`) |
-| `pnpm e2e` | Playwright su Edge a **375 / 768 / 1024 / 1280 / 1440**, con axe |
+| `pnpm test` | **315** unit test con Vitest (logica pura + strato Dexie su `fake-indexeddb`) |
+| `pnpm e2e` | **255** test Playwright su Edge a **375 / 768 / 1024 / 1280 / 1440**, con axe |
 | `pnpm e2e:375` | solo il telefono |
 | `node scripts/generate-icons.mjs` | rigenera le icone della PWA dai token |
 
@@ -141,23 +141,26 @@ src/
 │   ├── (tabs)/                 le cinque tab: bottom nav < 1024, Sidebar ≥ 1024
 │   │   ├── home/               il feed + l'avvio in cima
 │   │   ├── allenamento/        quick start, routine, editor con riordino
-│   │   ├── trainer/            la tab esiste, il Trainer no: stato vuoto dichiarato
+│   │   ├── trainer/            dashboard, giorno del programma, registro delle decisioni
 │   │   ├── profilo/            totali, tab, calendario mensile, feed personale
 │   │   ├── esercizi/           libreria, filtri in query string, due pannelli ≥ 1280
 │   │   ├── misure/             elenco metriche + dettaglio con grafico
 │   │   └── statistiche/        volume, distribuzione muscolare, 1RM, record
+│   ├── trainer/questionario/   le sei domande, a schermo intero e fuori dal guscio
 │   ├── sessione/               sessione attiva a schermo intero + riepilogo con i PR
 │   └── impostazioni/           indice + pannello, una rotta per sezione
 ├── components/
 │   ├── ui/                     primitivi su Radix, ritemati sui nostri token
 │   ├── layout/                 Sidebar, bottom nav, colonna destra, ricerca globale
 │   ├── session/                NumberField, SetRow, ExerciseCard, timer, calcolatori
+│   ├── trainer/                card «Oggi», accordion delle settimane, riga del perché
 │   ├── charts/                 cornice e stati dei grafici + Recharts in next/dynamic
 │   ├── history/ · measures/ · settings/
 │   └── shared/                 EmptyState, ErrorState, Async, PRBadge, SortableList
 ├── lib/
 │   ├── db/                     schema, migrazioni, seed, query, mutazioni, PR, backup
 │   ├── logic/                  volume, 1RM, PR, statistiche, riscaldamento, dischi, timer
+│   ├── trainer/                generatore, nove regole di progressione, orologio del ciclo
 │   ├── backup/                 formato versionato, CSV, download
 │   ├── format.ts               Intl it-IT
 │   └── hooks/                  useLiveData (tre stati), useNow, useRouteId, …
@@ -167,7 +170,7 @@ docs/
 ├── design-system.md            token, componenti, flussi, contratto di accessibilità
 ├── esercizi-hevy.md            la lista da cui nasce la libreria
 └── qa-report.md                l'audit che ha aperto i difetti chiusi in v2
-e2e/                            Playwright: sessione, record, backup, offline, axe
+e2e/                            Playwright: sessione, Trainer, record, backup, offline, axe
 scripts/generate-icons.mjs      icone PWA generate dai token, senza dipendenze
 ```
 
@@ -188,10 +191,73 @@ Chi arriva dalla v1 viene migrato all'apertura e non perde niente: la prova sta 
 | `measurements` | `id`, `metric`, `date`, `[metric+date]` |
 | `settings` | `id` (singleton) |
 | `appMeta` | `key` (versione del seed) |
-| `trainerProfile` · `trainerPrograms` · `trainerDays` · `trainerDecisions` | **vuote in v2**: esistono perché il formato di backup sale a 2 adesso e non si cambia formato due volte |
+| `trainerProfile` | `id` (singleton): le risposte al questionario, bozza compresa |
+| `trainerPrograms` | `id`, `status`, `startedAt`: il programma è il documento, settimane e giorni annidati |
+| `trainerDays` | `id`, `programId`, `status`, `plannedFor`, `sessionId`, `[programId+weekIndex]`: **indice**, non una seconda copia — serve a `/trainer/giorno/[id]`, che è un deep link |
+| `trainerDecisions` | `id`, `programId`, `exerciseId`, `decidedAt`, `[programId+decidedAt]` |
 
 Le serie restano annidate dentro la sessione: la sessione è il documento, `*exerciseIds`
 è solo un indice derivato per ritrovarla partendo da un esercizio.
+
+---
+
+## Come funziona il Trainer
+
+Due pezzi, tutti e due **logica pura** (`src/lib/trainer/`, nessun browser, nessun
+Dexie): si provano con i test di unità, e infatti è lì che sono provati.
+
+### Il generatore — dal profilo al programma
+
+1. **I pattern di movimento.** Il gruppo muscolare non basta a scrivere un allenamento:
+   `chest` tiene insieme la panca e le croci, `back` tiene insieme lo stacco e il lat
+   pulldown. Ogni esercizio della libreria viene classificato in uno di **sedici
+   pattern** (spinta orizzontale, trazione verticale, femorali, …) a partire da
+   `muscleGroup` + `mechanics` + famiglia. È quello che si bilancia.
+2. **Lo split.** Il numero di giorni decide la forma della settimana — 2 → Full body ×2,
+   3 → Full body ×3 o Push/Pull/Legs secondo il livello, 4 → Upper/Lower ×2, 5 →
+   PPL + Upper/Lower, 6 → PPL ×2. Il questionario lo **dice al passo 5**, prima di
+   generare.
+3. **Gli slot.** Un giorno non è un elenco di esercizi: è un elenco di posti da riempire,
+   ciascuno con un pattern e un ruolo (primario · secondario · complementare), **in
+   ordine di importanza**. Quando la seduta è corta si taglia dalla coda, mai dalla testa:
+   a 45 minuti resta il fondamentale e sparisce il curl.
+4. **La scelta.** Ogni slot prende l'esercizio col punteggio più alto fra quelli
+   **compatibili con l'attrezzatura dichiarata**: popolarità, meno la penalità per una
+   famiglia già usata nel programma, più un bonus di ruolo (un fondamentale dev'essere
+   multiarticolare e a carico regolabile — un push up alle bande in 5×3 è una
+   progressione che non può avanzare). Mai due esercizi della stessa famiglia nello
+   stesso giorno.
+5. **Il ripiego.** Con il solo corpo libero un giorno di «Trazione» esiste sul foglio e
+   non in palestra. Allora si ripiega sul full body, che ha slot più larghi; e se
+   nemmeno quello copre petto, dorso e gambe, la generazione **rifiuta dicendo il
+   motivo esatto**, invece di consegnare tre esercizi e chiamarli settimana.
+6. **Volume e intensità** vengono da obiettivo × ruolo × livello, in tabella. Il livello
+   corregge il **volume**, non l'intensità: al principiante meno serie, all'avanzato una
+   in più sui fondamentali.
+
+### Le nove regole di progressione
+
+Sono **dati**, non `if` sparsi: vivono in `PROGRESSION_RULES`, e la schermata «Come
+funziona la progressione» legge la stessa tabella che decide i carichi.
+
+| Regola | Quando scatta | Effetto |
+|---|---|---|
+| `double-progression` | tutte le serie al tetto dell'intervallo e RPE medio entro l'obiettivo | +1 incremento, le ripetizioni tornano al fondo |
+| `reps-first` | serie complete ma sotto il tetto | +1 ripetizione, carico invariato |
+| `rpe-cap` | una serie allo sforzo massimo consentito | l'aumento si **dimezza**; se mezzo incremento non è caricabile, resta fermo **e lo dice** |
+| `hold-on-miss` | una seduta sotto il fondo dell'intervallo | carico invariato |
+| `deload-on-miss` | **due** sedute di fila sotto il fondo | −10%, arrotondato all'incremento vero |
+| `planned-deload` | la settimana che arriva è di scarico | volume −40%, carico −10% |
+| `skip-hold` | nessun allenamento nella settimana | nessuna progressione, il carico resta l'ultimo davvero usato |
+| `first-time` | nessuno storico | nessun carico proposto: il campo resta vuoto |
+| `manual` | l'hai deciso tu | il tuo valore diventa la nuova base |
+
+Ogni decisione porta con sé i numeri che l'hanno attivata, le **sessioni citate come
+link verificabili** e — obbligatoria su ogni esercizio — la frase di **che cosa serve
+per il prossimo passo**. Sapere cos'è successo non serve, se non si sa cosa fare.
+
+Gli incrementi sono **impostazioni**, non costanti: bilanciere parte alta 2,5 kg, parte
+bassa 5, manubri 2, macchine e cavi 5. Niente arrotondamenti silenziosi.
 
 ---
 
@@ -252,6 +318,22 @@ perderebbe voci sull'indice unico.
 quello che gli permette di *aggiornare* gli 81 esercizi della v1 invece di affiancarne
 una copia: lo storico dell'utente resta attaccato all'esercizio che ha sempre usato. E
 gli esercizi `isCustom` non li tocca mai, nemmeno per aggiungere un campo.
+
+**Il Trainer scrive la decisione, non la ricalcola.** Ogni cambio di carico produce una
+riga in `trainerDecisions` con la regola che l'ha prodotta, i numeri su cui si basa e le
+sessioni che li contengono. È lo stesso motivo per cui `PersonalRecord` è una tabella e
+non un calcolo: la storia deve restare quella che è stata, anche dopo che cambi
+un'impostazione o cancelli un allenamento. Un «perché» ricalcolato a ogni render
+cambierebbe da solo, e un allenatore che cambia versione smette di essere credibile.
+
+**Il programma non scavalca da solo una settimana vuota.** Se una settimana passa senza
+un allenamento, il Trainer si ferma e chiede: ripetere la settimana, andare avanti o
+rigenerare — tre azioni, nessuna preselezionata, e la frase «Non tocco niente finché non
+decidi». Dalla seconda settimana saltata di fila propone anche di **ridurre i giorni**:
+adattare, non insistere.
+
+**Il carico consigliato entra nei campi come valore, non come placeholder.** Il Trainer
+propone, quindi scrive. Una proposta che l'utente deve ridigitare non è una proposta.
 
 **Il formato di backup è salito a 2, e nello stesso momento l'importatore ha imparato a
 leggere l'1.** Un backup fatto ieri deve restare importabile domani: è l'unica rete di

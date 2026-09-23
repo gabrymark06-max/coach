@@ -49,6 +49,7 @@ const SHELLS: readonly [prefix: string, shell: string][] = [
   ["/profilo/sessione/", "/profilo/sessione/_"],
   ["/sessione/riepilogo/", "/sessione/riepilogo/_"],
   ["/allenamento/routine/", "/allenamento/routine/_"],
+  ["/trainer/giorno/", "/trainer/giorno/_"],
 ];
 
 /** Le scocche con un sottolivello (`/esercizi/[id]/modifica`) hanno la loro variante. */

@@ -141,6 +141,40 @@ export function formatDay(iso: string): string {
   return (sameYear ? dayFormat : dayYearFormat).format(date);
 }
 
+/**
+ * `giovedì 24 settembre` — la data come la dice la card «Oggi» (§4.24).
+ *
+ * Il giorno della settimana serve: «24 settembre» richiede un calendario per capire se
+ * e' oggi, «giovedì 24 settembre» no. L'anno invece non serve mai su una card che parla
+ * di oggi.
+ */
+const weekdayFormat = new Intl.DateTimeFormat("it-IT", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+
+export function formatWeekdayDay(iso: string): string {
+  return weekdayFormat.format(new Date(iso));
+}
+
+/**
+ * `gio 24 set` — la data breve **con il giorno della settimana**.
+ *
+ * Serve dove una data sta accanto a dei numeri di allenamento: «24 set» da solo, in
+ * un'app di pesi, si legge come ventiquattro serie. Tre lettere di giorno tolgono
+ * l'ambiguita' senza rubare spazio.
+ */
+const shortWeekdayFormat = new Intl.DateTimeFormat("it-IT", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+});
+
+export function formatShortWeekdayDay(iso: string): string {
+  return shortWeekdayFormat.format(new Date(iso));
+}
+
 export function formatFull(iso: string): string {
   return fullFormat.format(new Date(iso));
 }
