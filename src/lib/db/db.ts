@@ -9,6 +9,12 @@ import type {
   Session,
   Settings,
 } from "./schema";
+import type {
+  ProgressionDecision,
+  TrainerDay,
+  TrainerProfile,
+  TrainerProgram,
+} from "./trainer-schema";
 
 export class LiftedDB extends Dexie {
   exercises!: EntityTable<Exercise, "id">;
@@ -18,6 +24,16 @@ export class LiftedDB extends Dexie {
   measurements!: EntityTable<MeasurementEntry, "id">;
   settings!: EntityTable<Settings, "id">;
   appMeta!: EntityTable<AppMeta, "key">;
+
+  /**
+   * Tabelle del Trainer (§9.5). **Nessuna schermata le legge in v2** — esistono perche'
+   * il backup sale a `formatVersion: 2` in questo intervento e non si cambia formato
+   * due volte. Si esportano e si importano vuote.
+   */
+  trainerProfile!: EntityTable<TrainerProfile, "id">;
+  trainerPrograms!: EntityTable<TrainerProgram, "id">;
+  trainerDays!: EntityTable<TrainerDay & { programId: string }, "id">;
+  trainerDecisions!: EntityTable<ProgressionDecision, "id">;
 
   constructor(name = "lifted") {
     super(name);

@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
-import { BackupView } from "./backup-view";
+import { permanentRedirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Backup e ripristino",
-  description: "Esporta lo storico e le misure in JSON o CSV, ripristina da un backup.",
-};
-
-export default function BackupPage() {
-  return <BackupView />;
+/**
+ * `/impostazioni/backup` si e' rinominata in `/impostazioni/dati` (§6.1), e **mantiene
+ * un redirect permanente**: la microcopy di §5.1 e le pagine di informazioni puntano
+ * ancora li', e un link interno che finisce su un 404 e' un difetto, non una rinomina.
+ */
+export default function BackupRedirect() {
+  permanentRedirect("/impostazioni/dati");
 }

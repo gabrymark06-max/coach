@@ -83,6 +83,9 @@ describe("export → import", () => {
       sessions: 0,
       personalRecords: 0,
       measurements: 0,
+      trainerPrograms: 0,
+      trainerDays: 0,
+      trainerDecisions: 0,
     });
 
     await restoreBackup(db, parseBackup(testo));

@@ -15,20 +15,50 @@ export type ID = string;
 export type ISODate = string;
 
 export type SetType = "normal" | "warmup" | "drop" | "failure";
+
+/**
+ * Attrezzi — **da 6 a 15 in v2** (§9.4). Ampliata, non sostituita: i sei valori della
+ * v1 sono ancora qui con lo stesso nome, quindi nessun esercizio gia' salvato cambia
+ * significato. Ogni combinazione movimento x attrezzo e' un esercizio distinto: e'
+ * questa lista che decide quante voci ha la libreria.
+ */
 export type Equipment =
   | "barbell"
+  | "ez-bar"
   | "dumbbell"
   | "cable"
   | "machine"
+  | "smith"
   | "bodyweight"
+  | "weighted"
+  | "assisted-machine"
+  | "kettlebell"
+  | "band"
+  | "trap-bar"
+  | "medicine-ball"
+  | "plate"
   | "other";
+
+/** Gruppi muscolari — **da 6 a 8 in v2**: trapezi e full body escono da «dorso». */
 export type MuscleGroup =
   | "chest"
   | "back"
   | "shoulders"
   | "legs"
   | "arms"
-  | "core";
+  | "core"
+  | "traps"
+  | "fullbody";
+
+/**
+ * Come si carica l'esercizio. Non e' un dettaglio estetico: decide se il campo KG parte
+ * vuoto, se il peso va sommato a quello corporeo e, in futuro, cosa puo' proporre il
+ * Trainer con l'attrezzatura dichiarata.
+ */
+export type LoadMode = "external" | "bodyweight" | "weighted-bodyweight" | "assisted";
+
+/** Fondamentale o complementare: serve all'ordinamento e alla generazione futura. */
+export type Mechanics = "compound" | "isolation";
 export type PRKind = "e1rm" | "volume" | "reps";
 export type SessionStatus = "active" | "completed" | "discarded";
 
@@ -48,7 +78,14 @@ export const PLATE_KGS: readonly PlateKg[] = [20, 15, 10, 5, 2.5, 1.25];
 export interface Exercise {
   id: ID;
   name: string;
-  /** chiave di unicita' normalizzata (indice unico `&nameKey`) */
+  /**
+   * Chiave di unicita' normalizzata (indice unico `&nameKey`).
+   *
+   * **In v2 include l'attrezzo** (§9.4). Senza, `Panca piana (Bilanciere)` e
+   * `Panca piana (Manubri)` collidono appena qualcuno ne scrive uno senza parentesi, e
+   * il seed perde silenziosamente una voce sull'indice unico. Si costruisce sempre con
+   * `exerciseKey`, mai a mano.
+   */
   nameKey: string;
   muscleGroup: MuscleGroup;
   secondaryMuscles: MuscleGroup[];
@@ -59,6 +96,29 @@ export interface Exercise {
   defaultRestSec?: number;
   createdAt: ISODate;
   archivedAt?: ISODate;
+
+  // --- v2, §9.4 ---
+  /**
+   * Famiglia di movimento: `panca-piana` tiene insieme bilanciere, manubri, Smith e
+   * macchina. E' il raggruppamento della libreria quando c'e' un filtro muscolo attivo
+   * (§4.26) — un campo, non una deduzione dal nome. Vuota sui personalizzati.
+   */
+  family: string;
+  /** qualifica di presa o di angolo: `presa inversa`, `corda`, `su panca declinata` */
+  variant?: string;
+  mechanics: Mechanics;
+  /** un braccio o una gamba per volta: il volume si conta per lato */
+  unilateral: boolean;
+  loadMode: LoadMode;
+  /** incremento minimo dell'attrezzo: una macchina a tacche non fa 2,5 kg */
+  stepKgOverride?: number;
+  /** ordine di default nella libreria: prima quelli che si usano davvero */
+  popularity: number;
+  /**
+   * **Previsto dallo schema, mai mostrato in v2** (spec-v2 §4). Nessuna schermata deve
+   * promettere un video che non c'e': non esiste una riga di UI che legga questo campo.
+   */
+  videoUrl?: string | null;
 }
 
 export interface RoutineSetTemplate {
@@ -138,6 +198,12 @@ export interface Session {
   restPausedMs?: number;
   /** indice multiEntry: quali esercizi compaiono nella sessione */
   exerciseIds: ID[];
+  /**
+   * Il giorno del programma che questa sessione ha chiuso (§9.5). E' **l'unico** campo
+   * che la sessione guadagna con il Trainer: senza, la progressione non saprebbe su
+   * quali esercizi girare. In v2 non lo scrive nessuno.
+   */
+  trainerDayId?: ID;
 }
 
 export interface PersonalRecord {
@@ -181,6 +247,19 @@ export interface Settings {
   lastExportAt?: ISODate;
   onboardingSeenAt?: ISODate;
   schemaVersion: number;
+
+  /**
+   * Incrementi del Trainer (§9.5) — **impostazioni, non costanti nel codice**: chi si
+   * allena in una palestra con i manubri da 2 kg deve poterlo dire. Il Trainer non
+   * esiste ancora in v2 e questi valori non hanno ancora una schermata; vivono qui
+   * perche' lo schema e il backup li portano gia', e non si cambia formato due volte.
+   */
+  trainerIncrementUpperKg: number;
+  trainerIncrementLowerKg: number;
+  trainerIncrementDumbbellKg: number;
+  trainerIncrementMachineKg: number;
+  trainerDeloadEveryWeeks: number;
+  trainerRpeCap: number;
 }
 
 /** Bookkeeping di sistema (versione del seed, ecc.) — non e' roba dell'utente. */
@@ -204,25 +283,106 @@ export const DEFAULT_SETTINGS: Settings = {
   stepKgFine: 1.25,
   warmupPercents: [0.5, 0.7, 0.875],
   schemaVersion: 1,
+  trainerIncrementUpperKg: 2.5,
+  trainerIncrementLowerKg: 5,
+  trainerIncrementDumbbellKg: 2,
+  trainerIncrementMachineKg: 5,
+  trainerDeloadEveryWeeks: 4,
+  trainerRpeCap: 9.5,
 };
 
 export const MUSCLE_GROUP_LABEL: Record<MuscleGroup, string> = {
   chest: "Petto",
   back: "Dorso",
   shoulders: "Spalle",
-  legs: "Gambe",
   arms: "Braccia",
+  legs: "Gambe",
   core: "Core",
+  traps: "Trapezi",
+  fullbody: "Full body",
 };
+
+/** Ordine in cui i gruppi compaiono nella libreria: dall'alto in basso del corpo. */
+export const MUSCLE_GROUP_ORDER: readonly MuscleGroup[] = [
+  "chest",
+  "back",
+  "shoulders",
+  "traps",
+  "arms",
+  "legs",
+  "core",
+  "fullbody",
+];
 
 export const EQUIPMENT_LABEL: Record<Equipment, string> = {
   barbell: "Bilanciere",
+  "ez-bar": "Bilanciere EZ",
   dumbbell: "Manubri",
   cable: "Cavi",
-  machine: "Macchinario",
+  machine: "Macchina",
+  smith: "Smith machine",
   bodyweight: "Corpo libero",
-  other: "Altro",
+  weighted: "Zavorrato",
+  "assisted-machine": "Macchina assistita",
+  kettlebell: "Kettlebell",
+  band: "Bande",
+  "trap-bar": "Trap bar",
+  "medicine-ball": "Palla medica",
+  plate: "Disco",
+  other: "Attrezzo specifico",
 };
+
+export const EQUIPMENT_ORDER: readonly Equipment[] = [
+  "barbell",
+  "ez-bar",
+  "dumbbell",
+  "kettlebell",
+  "cable",
+  "machine",
+  "smith",
+  "bodyweight",
+  "weighted",
+  "assisted-machine",
+  "band",
+  "trap-bar",
+  "medicine-ball",
+  "plate",
+  "other",
+];
+
+/**
+ * L'incremento minimo che l'attrezzo permette davvero. Una macchina a tacche non fa
+ * 2,5 kg, e una coppia di manubri sale di 2 per volta: proporre 82,5 kg su una pila
+ * di pesi e' una bugia gentile. `stepKgOverride` sull'esercizio vince su questa tabella.
+ */
+export const EQUIPMENT_STEP_KG: Partial<Record<Equipment, number>> = {
+  machine: 5,
+  "assisted-machine": 5,
+  dumbbell: 2,
+  cable: 2.5,
+};
+
+/**
+ * Come si carica, dedotto dall'attrezzo quando l'esercizio non dice altro.
+ * `weighted` e' il corpo libero con una cintura, `assisted-machine` e' il corpo libero
+ * con un contrappeso: sono tre modi diversi di scrivere un numero nel campo KG.
+ */
+export const EQUIPMENT_LOAD_MODE: Partial<Record<Equipment, LoadMode>> = {
+  bodyweight: "bodyweight",
+  weighted: "weighted-bodyweight",
+  "assisted-machine": "assisted",
+};
+
+/**
+ * Chiave di unicita' di un esercizio: **nome + attrezzo** (§9.4).
+ *
+ * Era il solo nome, e bastava a far collidere `Panca piana (Bilanciere)` con una
+ * `Panca piana` scritta a mano dall'utente. Con ~300 voci generate per combinazione
+ * movimento x attrezzo, il nome da solo non e' piu' un'identita'.
+ */
+export function exerciseKey(name: string, equipment: Equipment): string {
+  return `${normalizeName(name)}|${equipment}`;
+}
 
 export const METRIC_LABEL: Record<MetricKey, string> = {
   bodyweight: "Peso corporeo",
@@ -275,6 +435,18 @@ export const SET_TYPE_LABEL: Record<SetType, string> = {
   warmup: "Riscaldamento (W)",
   drop: "Drop set (D)",
   failure: "Cedimento (F)",
+};
+
+/**
+ * Il tipo **detto a voce**: senza sigla, senza parentesi, minuscolo perche' entra in
+ * mezzo a una frase. `SET_TYPE_LABEL` resta quello che si legge a schermo, dove la
+ * sigla serve a collegare l'etichetta alla lettera della cella (QA MINORE 4).
+ */
+export const SET_TYPE_SPEECH: Record<SetType, string> = {
+  normal: "normale",
+  warmup: "riscaldamento",
+  drop: "drop set",
+  failure: "cedimento",
 };
 
 export const SET_TYPE_GLYPH: Record<Exclude<SetType, "normal">, string> = {

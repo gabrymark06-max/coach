@@ -10,7 +10,26 @@ import { cn } from "@/lib/utils";
  * da tastiera.
  */
 
-export const DropdownMenu = Primitive.Root;
+/**
+ * **QA MINORE 1** (`aria-hidden-focus`, axe *serious*). Radix, in modalita' modale,
+ * mette `aria-hidden` su tutto il resto della pagina ma **non** lo toglie dall'ordine
+ * di tabulazione: lo skip link e la nav restavano raggiungibili con `Tab` mentre uno
+ * screen reader non li poteva piu' annunciare. Nove nodi, a 375 e a 1440.
+ *
+ * Qui il menu e' un'azione breve su una riga, non una modale: `modal={false}` toglie
+ * l'`aria-hidden` alla radice del problema invece di rincorrerlo con `inert`. Frecce,
+ * `Esc` e la restituzione del fuoco al trigger restano quelle di Radix; in piu' la
+ * pagina dietro continua a scorrere, che su un telefono e' un guadagno.
+ *
+ * I `Sheet` e i `Dialog` restano modali: li' l'`aria-hidden` e' giusto, e infatti su
+ * quelli axe non trovava niente.
+ */
+export function DropdownMenu({
+  modal = false,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof Primitive.Root>) {
+  return <Primitive.Root modal={modal} {...props} />;
+}
 export const DropdownMenuTrigger = Primitive.Trigger;
 export const DropdownMenuGroup = Primitive.Group;
 

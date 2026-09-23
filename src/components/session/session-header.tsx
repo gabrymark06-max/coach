@@ -59,9 +59,16 @@ export function SessionHeader({
         </button>
 
         <div className="min-w-0 flex-1 text-center">
-          <p className="truncate text-sm text-[var(--text-secondary)]">
+          {/*
+            QA GRAVE 5 — l'`h1` di `/sessione`. Il nome della routine e' il titolo di
+            questa pagina: era un `<p>`, e la rotta su cui si passa tutto il tempo era
+            l'unica senza un punto di riferimento per uno screen reader. Il livello
+            cambia, la misura no — i nomi degli esercizi restano `h2` (§4.2) e la
+            gerarchia non salta.
+          */}
+          <h1 className="truncate text-sm font-normal tracking-normal text-[var(--text-secondary)]">
             {session.routineName ?? "Sessione libera"}
-          </p>
+          </h1>
           <p className="flex items-baseline justify-center gap-3">
             <span
               className={cn(

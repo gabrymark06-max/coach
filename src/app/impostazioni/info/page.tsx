@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeader } from "@/components/shared/page-header";
+import { InfoPanel } from "./info-panel";
 import { APP_VERSION } from "@/lib/app-version";
 
 export const metadata: Metadata = {
@@ -19,10 +19,7 @@ const LICENZE = [
 
 export default function InfoPage() {
   return (
-    <>
-      <PageHeader title="Informazioni" />
-
-      <div className="app-container flex flex-col gap-8 pb-8">
+    <InfoPanel>
         <section aria-labelledby="titolo-dati" className="flex flex-col gap-3">
           <h2 id="titolo-dati" className="text-h2 text-[var(--text-primary)]">
             Dove stanno i tuoi dati
@@ -38,7 +35,7 @@ export default function InfoPage() {
           </p>
           <p className="text-base text-[var(--text-secondary)]">
             <Link
-              href="/impostazioni/backup"
+              href="/impostazioni/dati"
               className="text-[var(--accent-blue)] underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
             >
               Fai un backup adesso
@@ -52,7 +49,7 @@ export default function InfoPage() {
             Versione
           </h2>
           <p className="tnum text-base text-[var(--text-secondary)]">
-            Lifted <span translate="no">{APP_VERSION}</span> · formato di backup 1
+            Lifted <span translate="no">{APP_VERSION}</span> · formato di backup 2
           </p>
         </section>
 
@@ -72,7 +69,6 @@ export default function InfoPage() {
             ))}
           </ul>
         </section>
-      </div>
-    </>
+    </InfoPanel>
   );
 }

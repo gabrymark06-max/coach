@@ -39,8 +39,8 @@ async function pushRoutine() {
     split: "Push",
     exercises: [
       {
-        exerciseId: "lib-panca-piana-con-bilanciere",
-        exerciseName: "Panca piana con bilanciere",
+        exerciseId: "lib-panca-piana-barbell",
+        exerciseName: "Panca piana (Bilanciere)",
         order: 0,
         sets: [{ type: "normal" }, { type: "normal" }, { type: "normal" }],
       },
@@ -62,7 +62,7 @@ describe("esercizi personalizzati", () => {
   it("un nome gia' usato non passa, nemmeno con maiuscole diverse", async () => {
     await expect(
       createExercise(db, {
-        name: "panca PIANA con bilanciere",
+        name: "panca PIANA (Bilanciere)",
         muscleGroup: "chest",
         equipment: "barbell",
       }),
@@ -70,7 +70,7 @@ describe("esercizi personalizzati", () => {
   });
 
   it("gli esercizi della libreria non si eliminano", async () => {
-    await expect(deleteExercise(db, "lib-plank")).rejects.toThrow(/libreria/);
+    await expect(deleteExercise(db, "lib-plank-bodyweight")).rejects.toThrow(/libreria/);
   });
 });
 
@@ -99,7 +99,7 @@ describe("routine", () => {
       name: "Vuota",
       exercises: [
         {
-          exerciseId: "lib-plank",
+          exerciseId: "lib-plank-bodyweight",
           exerciseName: "Plank",
           order: 0,
           sets: [],
@@ -118,7 +118,7 @@ describe("sessione attiva", () => {
     expect(session.exercises).toHaveLength(1);
     expect(session.exercises[0].sets).toHaveLength(3);
     expect(session.exercises[0].equipment).toBe("barbell");
-    expect(session.exerciseIds).toEqual(["lib-panca-piana-con-bilanciere"]);
+    expect(session.exerciseIds).toEqual(["lib-panca-piana-barbell"]);
   });
 
   it("parte anche vuota", async () => {
@@ -206,7 +206,7 @@ describe("la colonna PRECEDENTE", () => {
     }
     await finishSession(db);
 
-    expect(await previousSetsFor(db, "lib-panca-piana-con-bilanciere")).toEqual([
+    expect(await previousSetsFor(db, "lib-panca-piana-barbell")).toEqual([
       { weightKg: 80, reps: 8 },
       { weightKg: 82.5, reps: 7 },
       { weightKg: 85, reps: 6 },

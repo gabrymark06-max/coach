@@ -55,13 +55,83 @@ export function formatInt(value: number): string {
   return intFormat.format(value);
 }
 
-/** `8 serie`, `1 serie` */
+/** `8 serie`, `1 serie` — invariabile, ma il posto giusto per chiederlo e' questo. */
 export function formatSets(count: number): string {
-  return `${count}${NBSP}${count === 1 ? "serie" : "serie"}`;
+  return `${count}${NBSP}serie`;
 }
 
 export function formatExerciseCount(count: number): string {
   return `${count}${NBSP}${count === 1 ? "esercizio" : "esercizi"}`;
+}
+
+/**
+ * Gli accordi italiani, in un posto solo (QA MINORE 2).
+ *
+ * Erano scritti a mano a ogni punto d'uso — cioe' mai — e producevano «1 allenamenti»,
+ * «1 serie completate», «su 1 settimane». Un'app in italiano che non sa dire *uno* si
+ * qualifica da sola: sono le tre frasi che un utente nuovo incontra per prime.
+ */
+export function formatSessionCount(count: number): string {
+  return `${formatInt(count)} ${count === 1 ? "allenamento" : "allenamenti"}`;
+}
+
+export function formatWeekCount(count: number): string {
+  return `${formatInt(count)} ${count === 1 ? "settimana" : "settimane"}`;
+}
+
+export function formatMeasurementCount(count: number): string {
+  return `${formatInt(count)} ${count === 1 ? "misurazione" : "misurazioni"}`;
+}
+
+export function formatRecordCount(count: number): string {
+  return `${formatInt(count)} ${count === 1 ? "record" : "record"}`;
+}
+
+/**
+ * `3 serie completate` / `1 serie completata`. «Serie» non cambia al plurale, il
+ * participio si': il numero decide l'aggettivo, non il sostantivo.
+ */
+export function formatSetCount(
+  count: number,
+  participle: "completata" | "saltata" | "registrata",
+): string {
+  const plural = `${participle.slice(0, -1)}e`;
+  return `${formatInt(count)} serie ${count === 1 ? participle : plural}`;
+}
+
+const MS_MIN = 60_000;
+const MS_HOUR = 3_600_000;
+const MS_DAY = 86_400_000;
+
+/**
+ * Durate **lunghe**, con la scala che rolla: `48 min` → `1 h 30 min` → `8 g 8 h`.
+ *
+ * `formatMinutes` (timer.ts) resta la forma giusta per la durata di una sessione, dove
+ * i minuti sono l'unita' naturale. Sul totale di vita del profilo produceva
+ * «12000 min», un numero che nessuno legge (QA MINORE 3). Mai tre unita' insieme: due
+ * bastano sempre a dare la misura, la terza e' precisione che nessuno usa.
+ */
+export function formatDurationLong(ms: number): string {
+  const total = Math.max(0, ms);
+
+  if (total >= MS_DAY) {
+    const days = Math.floor(total / MS_DAY);
+    const hours = Math.round((total % MS_DAY) / MS_HOUR);
+    // 23,7 ore arrotondate a 24 diventerebbero «8 g 24 h»
+    if (hours === 24) return `${days + 1}${NNBSP}g`;
+    return hours === 0 ? `${days}${NNBSP}g` : `${days}${NNBSP}g ${hours}${NNBSP}h`;
+  }
+
+  if (total >= MS_HOUR) {
+    const hours = Math.floor(total / MS_HOUR);
+    const minutes = Math.round((total % MS_HOUR) / MS_MIN);
+    if (minutes === 60) return `${hours + 1}${NNBSP}h`;
+    return minutes === 0
+      ? `${hours}${NNBSP}h`
+      : `${hours}${NNBSP}h ${minutes}${NNBSP}min`;
+  }
+
+  return `${Math.round(total / MS_MIN)}${NNBSP}min`;
 }
 
 /** `14 set` entro l'anno, `14 set 2025` fuori. */

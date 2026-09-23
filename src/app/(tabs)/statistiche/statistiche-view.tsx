@@ -24,7 +24,13 @@ import { Button } from "@/components/ui/button";
 import { getDb } from "@/lib/db/db";
 import { listPersonalRecords } from "@/lib/db/pr-ops";
 import { MUSCLE_GROUP_LABEL, type MuscleGroup } from "@/lib/db/schema";
-import { formatDay, formatFull, formatInt, formatKgValue, formatVolume } from "@/lib/format";
+import {
+  formatDay,
+  formatFull,
+  formatKgValue,
+  formatSessionCount,
+  formatVolume,
+} from "@/lib/format";
 import { useLiveData } from "@/lib/hooks/use-live-data";
 import { useMounted } from "@/lib/hooks/use-now";
 import {
@@ -187,7 +193,7 @@ export function StatisticheView() {
                 <ChartFrame
                   title={period === "week" ? "Volume settimanale" : "Volume mensile"}
                   titleId="titolo-volume"
-                  subtitle={`${formatInt(inRange.length)} allenamenti nell'intervallo scelto`}
+                  subtitle={`${formatSessionCount(inRange.length)} nell'intervallo scelto`}
                 >
                   {buckets.length === 0 ? (
                     <ChartEmpty line="Nessun allenamento in questo intervallo. Prova ad allargarlo." />
@@ -327,6 +333,8 @@ export function StatisticheView() {
                         series={serie1rm}
                         xKey="date"
                         yUnit="kg"
+                        domainMode="level"
+                        unitStep={0.5}
                         formatX={(value) => formatDay(value)}
                         formatTooltipLabel={(value) => formatFull(value)}
                         formatValue={(value) => `${formatKgValue(value)} kg`}

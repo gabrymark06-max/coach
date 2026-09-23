@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function Home() {
-  redirect("/allenamento");
+/** `/` porta alla home a feed (§6.1): in v1 portava a `/allenamento`. */
+export default function Index() {
+  redirect("/home");
 }

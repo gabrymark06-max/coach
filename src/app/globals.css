@@ -104,6 +104,28 @@
 
   /* incrementi (NumberField §4.18) — configurabili in Impostazioni */
   --step-kg: 2.5; --step-kg-fine: 1.25; --step-reps: 1;
+
+  /* ---------------------------------------------------------------
+     v2 — guscio a due/tre colonne (§1.16)
+     Nessuno di questi numeri vive dentro un componente: sono token,
+     come tutto il resto. E nessun colore nuovo: la v2 non introduce
+     un solo hex che non fosse gia' in v1.
+     --------------------------------------------------------------- */
+  --sidebar-w: 264px;
+  --sidebar-item-h: 48px;
+  --sidebar-search-h: 44px;
+  --sidebar-pad-x: var(--space-4);
+  --sidebar-foot-h: 64px;
+  --rail-right-w: 320px;
+  --shell-max: 1120px;
+  --shell-gutter: var(--space-7);
+  --shell-gutter-lg: var(--space-8);
+  --content-max: 760px;
+  --settings-index-w: 260px;
+  --pane-list-w: var(--rail-right-w);
+  --row-list-desk: 48px;
+  --cal-cell: 40px;
+  --cal-gap: var(--space-2);
 }
 
 @theme inline {
@@ -182,6 +204,9 @@
   --breakpoint-sm: 480px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
+  /* v2 — la colonna destra compare qui, non a 1024 (§1.14: a 1024 il centro
+     scenderebbe a 392px, meno di quanti ne ha a 768 senza sidebar) */
+  --breakpoint-3col: 1280px;
   --breakpoint-xl: 1440px;
 }
 
@@ -480,10 +505,63 @@
   }
 }
 
+/* =============================================================
+   v2 — il guscio a due e tre colonne (§7.4, §7.5)
+
+   Fra 768 e 1023 non succede **niente**: resta la bottom nav e il
+   contenuto a 680px. La soglia sta a 1024 perche' e' li' che il
+   dispositivo smette di essere quasi sempre touch, e una sidebar da
+   264px sul pollice di chi tiene un iPad non e' un guadagno.
+   ============================================================= */
+
+@media (min-width: 1024px) {
+  .shell {
+    padding-left: var(--sidebar-w);
+  }
+
+  .shell__content {
+    max-width: calc(var(--content-max) + var(--shell-gutter) * 2);
+    margin-inline: auto;
+    padding-inline: var(--shell-gutter);
+  }
+
+  /* dentro il guscio il contenitore non ri-limita: lo fa gia' la colonna */
+  .shell .app-container {
+    max-width: none;
+    padding-inline: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .shell__content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--rail-right-w);
+    gap: var(--shell-gutter-lg);
+    max-width: var(--shell-max);
+    padding-inline: var(--shell-gutter-lg);
+    align-items: start;
+  }
+
+  /* la colonna destra non e' mai l'unico posto in cui vive un dato (§4.20):
+     sotto 1280 le stesse card ricompaiono in coda al centro */
+  .rail-right {
+    position: sticky;
+    top: var(--space-8);
+    max-height: calc(100dvh - var(--space-8) * 2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 @media (min-width: 1440px) {
   .app-container {
     max-width: 1120px;
     padding-inline: var(--space-9);
+  }
+
+  .shell .app-container {
+    max-width: none;
+    padding-inline: 0;
   }
 }
 

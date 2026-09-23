@@ -1,5 +1,4 @@
-import { deriveExerciseIds } from "@/lib/db/migrations";
-import { normalizeName } from "@/lib/db/schema";
+import { deriveExerciseIds, fillV2ExerciseFields } from "@/lib/db/migrations";
 import type {
   Exercise,
   ISODate,
@@ -9,6 +8,12 @@ import type {
   Session,
   Settings,
 } from "@/lib/db/schema";
+import type {
+  ProgressionDecision,
+  TrainerDay,
+  TrainerProfile,
+  TrainerProgram,
+} from "@/lib/db/trainer-schema";
 
 /**
  * Formato del backup (spec §3.7).
@@ -24,7 +29,18 @@ import type {
  * rifiuta tutto il resto prima di toccare il database.
  */
 
-export const BACKUP_FORMAT_VERSION = 1;
+/**
+ * **2 in v2.** Sale perche' il payload cambia forma: gli esercizi hanno i campi di
+ * §9.4 e ci sono le quattro tabelle del Trainer.
+ *
+ * Nello **stesso** cambio, l'importatore impara ad accettare sia 1 sia 2. Prima
+ * rifiutava qualunque `formatVersion` maggiore del proprio con «versione piu' recente»,
+ * e siccome il confronto e' `<=`, alzare il numero senza toccare nient'altro avrebbe
+ * reso illeggibili i file nuovi alle versioni vecchie **e** avrebbe lasciato i v1 a
+ * caricarsi con i campi mancanti. Un backup fatto ieri deve restare importabile domani:
+ * e' l'unica rete di sicurezza di quest'app.
+ */
+export const BACKUP_FORMAT_VERSION = 2;
 
 export interface BackupPayload {
   exercises: Exercise[];
@@ -32,10 +48,17 @@ export interface BackupPayload {
   sessions: Session[];
   personalRecords: PersonalRecord[];
   measurements: MeasurementEntry[];
+  /** v2 — vuote finche' non arriva il Trainer, ma gia' nel formato (§9.5) */
+  trainerPrograms: TrainerProgram[];
+  trainerDays: TrainerDayRow[];
+  trainerDecisions: ProgressionDecision[];
+  trainerProfile: TrainerProfile | null;
   settings: Settings | null;
 }
 
-export type BackupTable = Exclude<keyof BackupPayload, "settings">;
+export type TrainerDayRow = TrainerDay & { programId: string };
+
+export type BackupTable = Exclude<keyof BackupPayload, "settings" | "trainerProfile">;
 
 export const BACKUP_TABLES: readonly BackupTable[] = [
   "exercises",
@@ -43,6 +66,9 @@ export const BACKUP_TABLES: readonly BackupTable[] = [
   "sessions",
   "personalRecords",
   "measurements",
+  "trainerPrograms",
+  "trainerDays",
+  "trainerDecisions",
 ];
 
 export interface LiftedBackup {
@@ -76,14 +102,21 @@ export function buildBackup(
     formatVersion: BACKUP_FORMAT_VERSION,
     schemaVersion: meta.schemaVersion,
     exportedAt: meta.exportedAt,
-    counts: {
-      exercises: payload.exercises.length,
-      routines: payload.routines.length,
-      sessions: payload.sessions.length,
-      personalRecords: payload.personalRecords.length,
-      measurements: payload.measurements.length,
-    },
+    counts: countOf(payload),
     data: payload,
+  };
+}
+
+function countOf(payload: BackupPayload): Record<BackupTable, number> {
+  return {
+    exercises: payload.exercises.length,
+    routines: payload.routines.length,
+    sessions: payload.sessions.length,
+    personalRecords: payload.personalRecords.length,
+    measurements: payload.measurements.length,
+    trainerPrograms: payload.trainerPrograms.length,
+    trainerDays: payload.trainerDays.length,
+    trainerDecisions: payload.trainerDecisions.length,
   };
 }
 
@@ -152,15 +185,23 @@ export function parseBackup(text: string): LiftedBackup {
   }
   const tables = data as Record<string, unknown>;
 
+  /*
+    Gli esercizi di un file v1 non hanno i campi di §9.4. Si riempiono qui, con gli
+    stessi default della migrazione Dexie: un backup vecchio si importa **completo**,
+    non a meta' con dei campi `undefined` che poi rompono un ordinamento.
+  */
   const exercises = asRecordArray(tables.exercises, "exercises").map((row) => {
     const name = typeof row.name === "string" ? row.name : "";
     if (name.trim() === "") throw malformed("«exercises»: un esercizio è senza nome.");
-    return {
+    const exercise = {
       ...row,
       name,
-      nameKey: normalizeName(name),
-      secondaryMuscles: Array.isArray(row.secondaryMuscles) ? row.secondaryMuscles : [],
+      equipment: typeof row.equipment === "string" ? row.equipment : "other",
     } as unknown as Exercise;
+    // La **stessa** funzione della migrazione Dexie: un file v1 importato deve produrre
+    // esattamente il database che avrebbe prodotto l'upgrade (§9.4).
+    fillV2ExerciseFields(exercise);
+    return exercise;
   });
 
   const routines = asRecordArray(tables.routines, "routines").map((row) => {
@@ -202,12 +243,40 @@ export function parseBackup(text: string): LiftedBackup {
       ? ({ ...(settingsRaw as object), id: "singleton" } as Settings)
       : null;
 
+  /*
+    Le tabelle del Trainer. In un file v1 non ci sono proprio: `asRecordArray` tratta
+    l'assenza come lista vuota, quindi un backup v1 si importa con il Trainer vuoto —
+    che e' esattamente cio' che era quando il file e' stato scritto.
+  */
+  const trainerPrograms = asRecordArray(
+    tables.trainerPrograms,
+    "trainerPrograms",
+  ) as unknown as TrainerProgram[];
+  const trainerDays = asRecordArray(
+    tables.trainerDays,
+    "trainerDays",
+  ) as unknown as TrainerDayRow[];
+  const trainerDecisions = asRecordArray(
+    tables.trainerDecisions,
+    "trainerDecisions",
+  ) as unknown as ProgressionDecision[];
+
+  const profileRaw = tables.trainerProfile;
+  const trainerProfile =
+    profileRaw && typeof profileRaw === "object" && !Array.isArray(profileRaw)
+      ? ({ ...(profileRaw as object), id: "singleton" } as TrainerProfile)
+      : null;
+
   const payload: BackupPayload = {
     exercises,
     routines,
     sessions,
     personalRecords,
     measurements,
+    trainerPrograms,
+    trainerDays,
+    trainerDecisions,
+    trainerProfile,
     settings,
   };
 
@@ -217,13 +286,7 @@ export function parseBackup(text: string): LiftedBackup {
     schemaVersion: Number(root.schemaVersion) || 1,
     exportedAt:
       typeof root.exportedAt === "string" ? root.exportedAt : new Date(0).toISOString(),
-    counts: {
-      exercises: exercises.length,
-      routines: routines.length,
-      sessions: sessions.length,
-      personalRecords: personalRecords.length,
-      measurements: measurements.length,
-    },
+    counts: countOf(payload),
     data: payload,
   };
 }

@@ -163,6 +163,8 @@ export function MetricaView() {
                 series={series}
                 xKey="date"
                 yUnit={unit}
+                domainMode="level"
+                unitStep={0.5}
                 formatX={(value) => formatDay(value)}
                 formatTooltipLabel={(value) => formatFull(value)}
                 formatValue={(value) => `${formatKgValue(value)} ${unit}`}

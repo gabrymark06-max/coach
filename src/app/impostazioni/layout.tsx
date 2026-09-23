@@ -1,11 +1,11 @@
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { SettingsShell, SettingsTwoPane } from "@/components/settings/settings-two-pane";
 
 /**
- * Le impostazioni stanno **fuori dalle cinque tab** (§6.1): sono una destinazione, non
- * una sezione in cui si vive. Non c'e' la bottom nav, quindi c'e' una via d'uscita
- * esplicita — un link vero, non un `history.back()` che dipende da come ci si e'
- * arrivati.
+ * Le impostazioni: **indice + pannello** (§4.28).
+ *
+ * Il `<main id="contenuto">` sta in `SettingsShell` e il titolo della sezione ci sta
+ * dentro — chiude QA MINORE 6, dove l'intestazione viveva fuori dal landmark e axe
+ * segnalava `region` su tutte e tre le rotte.
  */
 export default function ImpostazioniLayout({
   children,
@@ -13,19 +13,8 @@ export default function ImpostazioniLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-dvh">
-      <div className="app-container pt-5">
-        <Link
-          href="/profilo"
-          className="press inline-flex h-12 items-center gap-3 rounded-[var(--radius-btn)] px-3 text-base text-[var(--accent-blue)] hover:bg-[var(--surface-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
-        >
-          <ArrowLeft aria-hidden="true" className="size-5" strokeWidth={1.75} />
-          Profilo
-        </Link>
-      </div>
-      <main id="contenuto" tabIndex={-1} className="pb-9">
-        {children}
-      </main>
-    </div>
+    <SettingsShell>
+      <SettingsTwoPane>{children}</SettingsTwoPane>
+    </SettingsShell>
   );
 }

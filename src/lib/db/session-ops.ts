@@ -260,6 +260,26 @@ export function setDisplayNumber(
   return n;
 }
 
+/**
+ * Il nome parlato di una riga (§8.3): `serie 1`, `riscaldamento 2`.
+ *
+ * In minuscolo perche' entra in mezzo a una frase piu' lunga («Peso in chili, serie 1,
+ * Panca piana»). I riscaldamenti hanno una numerazione propria: chiamarli «serie 1»
+ * ruberebbe il nome alla prima serie allenante, e uno screen reader si troverebbe due
+ * righe con lo stesso nome.
+ */
+export function setSpokenName(
+  sets: readonly { type: SetType }[],
+  index: number,
+): string {
+  if (sets[index]?.type === "warmup") {
+    let n = 0;
+    for (let i = 0; i <= index; i += 1) if (sets[i].type === "warmup") n += 1;
+    return `riscaldamento ${n}`;
+  }
+  return `serie ${setDisplayNumber(sets, index) ?? index + 1}`;
+}
+
 function validatePatch(patch: SetPatch): void {
   if (patch.weightKg != null) {
     if (!Number.isFinite(patch.weightKg) || patch.weightKg < 0 || patch.weightKg > MAX_WEIGHT_KG) {

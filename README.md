@@ -18,13 +18,15 @@ Dexie.js · Recharts · dnd kit · Serwist
 |---|---|
 | **Allenamento** | routine illimitate per split, quick start, sessione attiva con peso, ripetizioni e RPE, tipi di serie Normale / Riscaldamento (W) / Drop (D) / Cedimento (F), volume in tempo reale, cronometro, timer di recupero fluttuante con avviso sonoro |
 | **Calcolatori** | riscaldamento a percentuali progressive e calcolatore di dischi per lato, con il bilanciere visualizzato |
-| **Esercizi** | libreria di 81 esercizi in italiano, filtri per muscolo e attrezzo, esercizi personalizzati illimitati |
+| **Esercizi** | libreria di **269 esercizi** in italiano — ogni combinazione movimento × attrezzo è una voce a sé (`Panca piana (Bilanciere)`, `(Manubri)`, `(Smith machine)`, `(Macchina)`) — filtri per muscolo e attrezzo, esercizi personalizzati illimitati. Da 1280px in su è a **due pannelli**: dettaglio al centro, elenco virtualizzato a destra |
+| **Home** | il feed degli allenamenti, con durata, volume, record ed esercizi, e l'avvio in cima |
 | **Record personali** | rilevati da soli alla chiusura della sessione su 1RM stimato, volume e ripetizioni, con il valore precedente e la sua data («112 kg, +4 sul record») |
-| **Profilo** | storico cronologico, dettaglio di ogni allenamento, riepilogo personale |
+| **Profilo** | totali di sempre, tab (Riepilogo · Statistiche · Misure), **calendario mensile** navigabile da tastiera, feed personale |
 | **Statistiche** | volume settimanale e mensile, distribuzione per gruppo muscolare, andamento del 1RM stimato per esercizio, elenco dei record |
 | **Misure** | peso corporeo, massa grassa e sei circonferenze, con grafico di andamento per ciascuna |
 | **Backup** | export completo in JSON e CSV, ripristino da JSON in transazione |
 | **PWA** | installabile su iOS e Android, **funziona completamente offline** |
+| **Trainer** | *non ancora costruito*. La tab esiste e dice onestamente che cosa manca: è il secondo intervento della v2 |
 
 ---
 
@@ -42,8 +44,8 @@ niente da configurare, ed è una proprietà del prodotto, non una mancanza. Al p
 avvio crea il database IndexedDB `lifted`, ci scrive le impostazioni predefinite e vi
 carica la libreria di esercizi.
 
-Per ripartire da zero: **Impostazioni → Backup → Cancella tutti i dati**, oppure
-cancella i dati del sito dal browser.
+Per ripartire da zero: **Impostazioni → Backup ed esportazione → Cancella tutti i dati**,
+oppure cancella i dati del sito dal browser.
 
 > In sviluppo il service worker è **spento** (`SerwistProvider disable`): una precache
 > che si aggiorna a ogni salvataggio è solo un modo per non vedere le proprie modifiche.
@@ -58,7 +60,7 @@ cancella i dati del sito dal browser.
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm lint` | ESLint (config Next + regole React) |
 | `pnpm test` | unit test con Vitest (logica pura + strato Dexie su `fake-indexeddb`) |
-| `pnpm e2e` | Playwright su Edge a 375 / 768 / 1440, con axe |
+| `pnpm e2e` | Playwright su Edge a **375 / 768 / 1024 / 1280 / 1440**, con axe |
 | `pnpm e2e:375` | solo il telefono |
 | `node scripts/generate-icons.mjs` | rigenera le icone della PWA dai token |
 
@@ -136,17 +138,19 @@ src/
 │   ├── manifest.ts             manifest della PWA
 │   ├── globals.css             TUTTI i token del design system + @theme inline
 │   ├── serwist/[path]/         rotta che genera /serwist/sw.js al build
-│   ├── (tabs)/                 le cinque tab, con bottom nav / rail laterale
+│   ├── (tabs)/                 le cinque tab: bottom nav < 1024, Sidebar ≥ 1024
+│   │   ├── home/               il feed + l'avvio in cima
 │   │   ├── allenamento/        quick start, routine, editor con riordino
-│   │   ├── profilo/            storico, riepilogo personale, dettaglio sessione
-│   │   ├── esercizi/           libreria, filtri in query string, esercizi custom
+│   │   ├── trainer/            la tab esiste, il Trainer no: stato vuoto dichiarato
+│   │   ├── profilo/            totali, tab, calendario mensile, feed personale
+│   │   ├── esercizi/           libreria, filtri in query string, due pannelli ≥ 1280
 │   │   ├── misure/             elenco metriche + dettaglio con grafico
 │   │   └── statistiche/        volume, distribuzione muscolare, 1RM, record
 │   ├── sessione/               sessione attiva a schermo intero + riepilogo con i PR
-│   └── impostazioni/           preferenze, backup, informazioni
+│   └── impostazioni/           indice + pannello, una rotta per sezione
 ├── components/
 │   ├── ui/                     primitivi su Radix, ritemati sui nostri token
-│   ├── layout/                 bottom nav, SessionBar, live regions, avvisi §5.1
+│   ├── layout/                 Sidebar, bottom nav, colonna destra, ricerca globale
 │   ├── session/                NumberField, SetRow, ExerciseCard, timer, calcolatori
 │   ├── charts/                 cornice e stati dei grafici + Recharts in next/dynamic
 │   ├── history/ · measures/ · settings/
@@ -159,8 +163,10 @@ src/
 │   └── hooks/                  useLiveData (tre stati), useNow, useRouteId, …
 └── sw.ts                       service worker
 docs/
-├── spec.md                     il brief dell'utente
-└── design-system.md            token, componenti, flussi, contratto di accessibilità
+├── spec.md · spec-v2.md        il brief dell'utente e la sua revisione
+├── design-system.md            token, componenti, flussi, contratto di accessibilità
+├── esercizi-hevy.md            la lista da cui nasce la libreria
+└── qa-report.md                l'audit che ha aperto i difetti chiusi in v2
 e2e/                            Playwright: sessione, record, backup, offline, axe
 scripts/generate-icons.mjs      icone PWA generate dai token, senza dipendenze
 ```
@@ -169,17 +175,20 @@ scripts/generate-icons.mjs      icone PWA generate dai token, senza dipendenze
 
 ## Dati
 
-Tutto in IndexedDB, database `lifted`, schema v1 (`src/lib/db/migrations.ts`).
+Tutto in IndexedDB, database `lifted`, **schema v2** (`src/lib/db/migrations.ts`).
+Chi arriva dalla v1 viene migrato all'apertura e non perde niente: la prova sta in
+`src/lib/db/migrations.test.ts` e, in un browser vero, in `e2e/migrazione.spec.ts`.
 
 | Tabella | Chiave e indici |
 |---|---|
-| `exercises` | `id`, `&nameKey`, `name`, `muscleGroup`, `equipment`, `createdAt`, `[muscleGroup+equipment]`, `*secondaryMuscles` |
+| `exercises` | `id`, `&nameKey`, `name`, `muscleGroup`, `equipment`, `family`, `popularity`, `createdAt`, `[muscleGroup+equipment]`, `[family+equipment]`, `*secondaryMuscles` |
 | `routines` | `id`, `order`, `name`, `split`, `updatedAt`, `lastPerformedAt`, `[split+order]` |
 | `sessions` | `id`, `status`, `startedAt`, `routineId`, `[status+startedAt]`, `*exerciseIds` |
 | `personalRecords` | `id`, `exerciseId`, `sessionId`, `achievedAt`, `[exerciseId+kind]`, `[exerciseId+achievedAt]` |
 | `measurements` | `id`, `metric`, `date`, `[metric+date]` |
 | `settings` | `id` (singleton) |
 | `appMeta` | `key` (versione del seed) |
+| `trainerProfile` · `trainerPrograms` · `trainerDays` · `trainerDecisions` | **vuote in v2**: esistono perché il formato di backup sale a 2 adesso e non si cambia formato due volte |
 
 Le serie restano annidate dentro la sessione: la sessione è il documento, `*exerciseIds`
 è solo un indice derivato per ritrovarla partendo da un esercizio.
@@ -215,6 +224,38 @@ palestra non paga 300 KB di libreria grafica che non usa.
 
 **Le icone sono generate da uno script**, non disegnate altrove: derivano dai token del
 design system, e se un colore cambia si rigenerano.
+
+**Un solo `<nav aria-label="Navigazione principale">` per documento.** Sotto 1024px è la
+bottom nav, sopra è la `Sidebar` da 264px, e le due **non coesistono mai** — nemmeno con
+una nascosta da `display:none`, perché una media query CSS nasconde ma non smonta. Per
+questo la soglia passa da `useIsDesktop()` e non dal CSS.
+
+**La colonna destra non è mai l'unico posto in cui vive un dato.** Sopra 1280px il suo
+contenuto finisce nell'`<aside>` con un portale; sotto, **la stessa istanza** scende in
+coda alla colonna centrale. Non due alberi che si somigliano, uno dei quali si dimentica
+di aggiornarsi: è il guscio a garantirlo, non la buona volontà di chi scrive la pagina.
+
+**L'inventario dei dischi si dichiara in totale e si carica per lato.** Il diviso due sta
+in `toPlateInventory`, in un posto solo. Prima veniva raccolto come totale e consumato
+come per-lato, e il calcolatore proponeva il doppio dei dischi che possiedi.
+
+**L'asse Y di un grafico parte da zero solo se lo zero vuol dire qualcosa.** Peso
+corporeo, circonferenze e 1RM stimato sono grandezze *di livello*: partono dal minimo, e
+allora il grafico **dichiara la scala** nel piede. Le barre del volume partono sempre da
+zero, perché l'area è il canale percettivo e una barra tagliata mente (`chart-domain.ts`).
+
+**`nameKey` include l'attrezzo.** Con ~270 voci generate per combinazione movimento ×
+attrezzo, il nome da solo non è più un'identità: senza l'attrezzo nella chiave, il seed
+perderebbe voci sull'indice unico.
+
+**Il seed riconosce le voci per `family` + `variant` + `equipment`, mai per nome.** È
+quello che gli permette di *aggiornare* gli 81 esercizi della v1 invece di affiancarne
+una copia: lo storico dell'utente resta attaccato all'esercizio che ha sempre usato. E
+gli esercizi `isCustom` non li tocca mai, nemmeno per aggiungere un campo.
+
+**Il formato di backup è salito a 2, e nello stesso momento l'importatore ha imparato a
+leggere l'1.** Un backup fatto ieri deve restare importabile domani: è l'unica rete di
+sicurezza di quest'app.
 
 ---
 

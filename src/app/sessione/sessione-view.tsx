@@ -10,6 +10,7 @@ import { PlatesSheet } from "@/components/session/plates-sheet";
 import { SessionHeader } from "@/components/session/session-header";
 import { WarmupSheet } from "@/components/session/warmup-sheet";
 import { SortableItem, SortableList } from "@/components/shared/sortable";
+import { RouteMain } from "@/components/layout/route-main";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -38,7 +39,7 @@ import {
   replaceExerciseNotes,
   toggleSetCompleted,
 } from "@/lib/db/session-ops";
-import { formatVolumeKg } from "@/lib/format";
+import { formatSetCount, formatVolumeKg } from "@/lib/format";
 import { speakDuration } from "@/lib/logic/timer";
 import { enteredSessionOnPurpose } from "@/lib/session-entry";
 import { useActiveSession, useSettings } from "@/lib/session-context";
@@ -109,37 +110,57 @@ export function SessioneView() {
     [],
   );
 
+  /*
+    QA GRAVE 5. Ogni ramo di questa rotta — caricamento, errore, nessuna sessione,
+    sessione viva — monta il proprio `<main id="contenuto">` e il proprio `<h1>`.
+    Una pagina di caricamento senza landmark e' comunque una pagina senza landmark.
+
+    E l'`h1` e' **lo stesso, nello stesso posto**, in tutti e tre i rami senza sessione:
+    se cambiasse o sparisse, quello che sta sotto salterebbe di sessanta pixel appena
+    Dexie risponde. E' un Cumulative Layout Shift pagato per niente.
+  */
   if (status === "loading") {
     return (
-      <div className="app-container pt-9">
-        <ListSkeleton rows={4} height={120} />
-      </div>
+      <RouteMain className="app-container pt-9">
+        <h1 className="text-h1 text-[var(--text-primary)]">Allenamento</h1>
+        <div className="mt-5">
+          <ListSkeleton rows={4} height={120} />
+        </div>
+      </RouteMain>
     );
   }
 
   if (status === "error") {
     return (
-      <div className="app-container pt-9">
-        <ErrorState
-          detail="Non riesco a leggere l'allenamento in corso su questo dispositivo."
-          onRetry={retry}
-        />
-      </div>
+      <RouteMain className="app-container pt-9">
+        <h1 className="text-h1 text-[var(--text-primary)]">Allenamento</h1>
+        <div className="mt-5">
+          <ErrorState
+            detail="Non riesco a leggere l'allenamento in corso su questo dispositivo."
+            onRetry={retry}
+          />
+        </div>
+      </RouteMain>
     );
   }
 
   if (!session) {
     return (
-      <EmptyState
-        icon={Dumbbell}
-        title="Nessun allenamento in corso"
-        line="Avvia una sessione dalla tab Allenamento."
-        action={
-          <Button block onClick={() => router.replace("/allenamento")}>
-            Vai ad Allenamento
-          </Button>
-        }
-      />
+      <RouteMain className="app-container pt-9">
+        <h1 className="text-h1 text-[var(--text-primary)]">Allenamento</h1>
+        <div className="mt-5">
+          <EmptyState
+            icon={Dumbbell}
+            title="Nessun allenamento in corso"
+            line="Avvia una sessione dalla tab Allenamento."
+            action={
+              <Button block onClick={() => router.replace("/allenamento")}>
+                Vai ad Allenamento
+              </Button>
+            }
+          />
+        </div>
+      </RouteMain>
     );
   }
 
@@ -155,7 +176,7 @@ export function SessioneView() {
   const warmupExercise = session.exercises.find((item) => item.id === warmupFor) ?? null;
 
   return (
-    <div className="min-h-dvh pb-40">
+    <RouteMain className="pb-40">
       <SessionHeader
         session={session}
         showRpe={settings.showRpe}
@@ -411,7 +432,7 @@ export function SessioneView() {
         body={
           completed === 0
             ? "Non hai completato nessuna serie. Vuoi comunque salvare questo allenamento?"
-            : `${completed} serie completate su ${totalSets}. Le serie vuote non verranno salvate.`
+            : `${formatSetCount(completed, "completata")} su ${totalSets}. Le serie vuote non verranno salvate.`
         }
         cancelLabel="Continua"
         confirmLabel={completed === 0 ? "Salva comunque" : "Termina"}
@@ -468,6 +489,6 @@ export function SessioneView() {
           if (finished) router.replace(`/sessione/riepilogo/${finished.session.id}`);
         }}
       />
-    </div>
+    </RouteMain>
   );
 }

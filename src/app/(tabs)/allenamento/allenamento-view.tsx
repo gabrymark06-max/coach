@@ -1,16 +1,17 @@
 "use client";
 
-import { LayoutList, Play, Plus } from "lucide-react";
+import { Dumbbell, LayoutList, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
+import { QuickActions, RailCard, RightRail } from "@/components/layout/right-rail";
 import { RoutineCard, RoutineCardSkeleton } from "@/components/routine/routine-card";
+import { QuickStart } from "@/components/shared/quick-start";
 import { PageHeader } from "@/components/shared/page-header";
 import { Async, EmptyState } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { announce } from "@/lib/announce";
 import { getDb } from "@/lib/db/db";
 import {
@@ -23,9 +24,6 @@ import {
 import { listRoutines } from "@/lib/db/queries";
 import type { Routine } from "@/lib/db/schema";
 import { useLiveData } from "@/lib/hooks/use-live-data";
-import { useNow } from "@/lib/hooks/use-now";
-import { elapsedSessionMs, formatStopwatch } from "@/lib/logic/timer";
-import { useActiveSession } from "@/lib/session-context";
 import { unlockAudio } from "@/lib/audio";
 import { markSessionEntry } from "@/lib/session-entry";
 
@@ -33,6 +31,15 @@ export function AllenamentoView() {
   const router = useRouter();
   const routines = useLiveData(() => listRoutines(getDb()), []);
   const [toDelete, setToDelete] = React.useState<Routine | null>(null);
+
+  const ultime = React.useMemo(
+    () =>
+      [...(routines.data ?? [])]
+        .filter((routine) => routine.lastPerformedAt)
+        .sort((a, b) => (b.lastPerformedAt ?? "").localeCompare(a.lastPerformedAt ?? ""))
+        .slice(0, 3),
+    [routines.data],
+  );
 
   const start = async (routineId?: string) => {
     // il gesto che avvia la sessione e' anche quello che sblocca l'audio del timer
@@ -63,7 +70,7 @@ export function AllenamentoView() {
       <PageHeader title="Allenamento" />
 
       <div className="app-container flex flex-col gap-8">
-        <QuickStart onStartEmpty={() => void start()} />
+        <QuickStart />
 
         <section aria-labelledby="titolo-routine" className="flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
@@ -152,61 +159,35 @@ export function AllenamentoView() {
           setToDelete(null);
         }}
       />
+
+      {/* la colonna in coda al centro non si monta prima del contenuto sopra: v. §4.20 */}
+      <RightRail ready={routines.status !== "loading"}>
+        <RailCard title="Azioni rapide">
+          <QuickActions
+            actions={[
+              { href: "/allenamento/routine/nuova", label: "Nuova routine", icon: Plus },
+              { href: "/esercizi/nuovo", label: "Nuovo esercizio", icon: Dumbbell },
+            ]}
+          />
+        </RailCard>
+
+        {/*
+          «Ultime usate» — tre routine, per il caso frequente: si apre l'app e si
+          riparte da dove si era rimasti. Una card di riepilogo senza dati non si mostra
+          vuota: senza routine gia' usate questa non si monta affatto (§4.20).
+        */}
+        {ultime.length > 0 ? (
+          <RailCard title="Ultime usate">
+            <QuickActions
+              actions={ultime.map((routine) => ({
+                href: `/allenamento/routine/${routine.id}`,
+                label: routine.name,
+                icon: LayoutList,
+              }))}
+            />
+          </RailCard>
+        ) : null}
+      </RightRail>
     </>
-  );
-}
-
-/** `QuickStart` — §4.6. Con una sessione gia' attiva non esiste piu' un "avvia". */
-function QuickStart({ onStartEmpty }: { onStartEmpty: () => void }) {
-  const { data: session, status } = useActiveSession();
-  const active = status === "ready" ? session : undefined;
-  const now = useNow(1000, Boolean(active));
-
-  if (status === "loading") {
-    // Stesso guscio della card, non un rettangolo di altezza indovinata: e' cosi' che
-    // il CLS di questa schermata va a zero.
-    return (
-      <section
-        aria-hidden="true"
-        className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--card)] p-5 shadow-[var(--elev-1)]"
-      >
-        <Skeleton className="h-6 w-40 rounded-[var(--radius-sm)]" />
-        <div className="mt-4">
-          <Skeleton className="h-14 w-full rounded-[var(--radius-btn)]" />
-        </div>
-        <Skeleton className="mt-3 h-5 w-52 rounded-[var(--radius-sm)]" />
-      </section>
-    );
-  }
-
-  return (
-    <section
-      aria-labelledby="titolo-quickstart"
-      className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--card)] p-5 shadow-[var(--elev-1)]"
-    >
-      <h2 id="titolo-quickstart" className="text-h3 text-[var(--text-primary)]">
-        Inizia ad allenarti
-      </h2>
-      <div className="mt-4">
-        {active ? (
-          <Button variant="secondary" size="lg" block asChild>
-            <Link href="/sessione" onClick={markSessionEntry}>
-              Riprendi sessione ·{" "}
-              <span className="tnum">
-                {now === 0 ? "--:--:--" : formatStopwatch(elapsedSessionMs(active, now))}
-              </span>
-            </Link>
-          </Button>
-        ) : (
-          <Button size="lg" block onClick={onStartEmpty}>
-            <Play aria-hidden="true" className="size-5" strokeWidth={1.75} />
-            Avvia sessione vuota
-          </Button>
-        )}
-      </div>
-      <p className="mt-3 text-sm text-[var(--text-secondary)]">
-        {active ? "L'allenamento continua finché non lo termini." : "Oppure scegli una routine."}
-      </p>
-    </section>
   );
 }

@@ -4,6 +4,7 @@ import { History } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import * as React from "react";
 import { SessionDetail } from "@/components/history/session-detail";
+import { RouteMain } from "@/components/layout/route-main";
 import { Async, EmptyState, ListSkeleton } from "@/components/shared/states";
 import { prSpokenLabel, sortByKind } from "@/components/shared/pr-badge";
 import { Button } from "@/components/ui/button";
@@ -74,8 +75,25 @@ export function RiepilogoView() {
     );
   }, [records, nameById]);
 
+  const routineName = state.status === "ready" ? state.data?.session.routineName : undefined;
+
   return (
-    <div className="app-container flex flex-col gap-6 py-11">
+    <RouteMain className="app-container flex flex-col gap-6 py-11">
+      {/*
+        QA GRAVE 5 — l'`h1` sta **fuori** dall'`Async`: una rotta ha un titolo anche
+        mentre carica e anche quando il dato non c'e'. §8.9 lo vuole `Riepilogo · Push A`.
+      */}
+      <header>
+        <h1 className="text-h1 text-[var(--text-primary)]">
+          Riepilogo{routineName ? ` · ${routineName}` : null}
+        </h1>
+        {state.status === "ready" && state.data ? (
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            {mounted ? formatFull(state.data.session.startedAt) : null}
+          </p>
+        ) : null}
+      </header>
+
       <Async
         state={state}
         loading={<ListSkeleton rows={3} height={96} />}
@@ -97,14 +115,6 @@ export function RiepilogoView() {
         {(data) =>
           data ? (
             <>
-              <header>
-                <h1 className="text-h1 text-[var(--text-primary)]">Allenamento salvato</h1>
-                <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  {data.session.routineName ? `${data.session.routineName} · ` : null}
-                  {mounted ? formatFull(data.session.startedAt) : null}
-                </p>
-              </header>
-
               <SessionDetail
                 session={data.session}
                 records={data.records}
@@ -120,6 +130,6 @@ export function RiepilogoView() {
           ) : null
         }
       </Async>
-    </div>
+    </RouteMain>
   );
 }

@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { solvePlates, type PlateInventory } from "./plates";
+import { DEFAULT_SETTINGS } from "@/lib/db/schema";
+import { solvePlates, toPlateInventory, type PlateInventory } from "./plates";
 
-/** Palestra ben fornita. */
+/**
+ * Palestra ben fornita, **per lato**: `PlateInventory` e' il budget di un lato solo,
+ * ed e' cio' che la DP consuma. Quello che l'utente dichiara in Impostazioni e' invece
+ * il totale — la conversione sta in `toPlateInventory` ed e' verificata piu' sotto.
+ */
 const FULL: PlateInventory = {
-  20: 8,
-  15: 2,
-  10: 4,
-  5: 4,
-  2.5: 4,
-  1.25: 4,
+  20: 4,
+  15: 1,
+  10: 2,
+  5: 2,
+  2.5: 2,
+  1.25: 2,
 };
 
 describe("solvePlates — combinazioni esatte", () => {
@@ -48,8 +53,16 @@ describe("solvePlates — combinazioni esatte", () => {
 
 describe("solvePlates — inventario limitato", () => {
   it("trova la combinazione esatta anche quando il disco piu' pesante non ci sta", () => {
-    // 20 kg per lato con un solo 15 e due 10: la risposta e' 10+10, non "15 e mi arrendo"
-    const inventory: PlateInventory = { 20: 0, 15: 1, 10: 2, 5: 0, 2.5: 0, 1.25: 0 };
+    // Dichiarati in tutto: due dischi da 15 e quattro da 10 → per lato 15×1 e 10×2.
+    // Per fare 20 kg per lato la risposta e' 10+10, non "15 e mi arrendo".
+    const inventory = toPlateInventory({
+      "20": 0,
+      "15": 2,
+      "10": 4,
+      "5": 0,
+      "2.5": 0,
+      "1.25": 0,
+    });
     const result = solvePlates(60, 20, inventory);
     expect(result.status).toBe("exact");
     expect(result.best?.perSide).toEqual([{ kg: 10, count: 2 }]);
@@ -107,6 +120,47 @@ describe("solvePlates — casi limite", () => {
     const result = solvePlates(15, 20, FULL);
     expect(result.status).toBe("below-bar");
     expect(result.best).toBeNull();
+  });
+});
+
+/**
+ * QA GRAVE 1: l'inventario era **raccolto come totale** e **consumato come per lato**,
+ * cioe' con un fattore 2 di troppo su ogni disco. Il verso giusto e' quello della copy
+ * di Impostazioni — «Quanti ne hai in tutto, non per lato» — perche' nessuno conta i
+ * dischi a mezze coppie: si guarda il rastrelliere e si dice un numero.
+ */
+describe("toPlateInventory — si dichiara il totale, si carica per lato", () => {
+  const zero = { "20": 0, "15": 0, "10": 0, "5": 0, "2.5": 0, "1.25": 0 };
+
+  it("due dischi da 20 in tutto sono uno solo per lato", () => {
+    const inventory = toPlateInventory({ ...zero, "20": 2 });
+    expect(inventory[20]).toBe(1);
+
+    // 100 kg vorrebbero 2 dischi da 20 per lato, cioe' 4 in tutto: non ci sono.
+    const result = solvePlates(100, 20, inventory);
+    expect(result.status).toBe("inexact");
+    expect(result.best?.perSide).toEqual([{ kg: 20, count: 1 }]);
+    expect(result.best?.totalKg).toBe(60);
+  });
+
+  it("un disco spaiato non si carica: tre da 10 in tutto valgono una coppia", () => {
+    const inventory = toPlateInventory({ ...zero, "10": 3 });
+    expect(inventory[10]).toBe(1);
+  });
+
+  it("l'inventario di fabbrica regge 100 kg e non promette l'impossibile", () => {
+    const inventory = toPlateInventory(DEFAULT_SETTINGS.plateInventory);
+    expect(inventory[20]).toBe(4);
+    expect(solvePlates(100, 20, inventory).status).toBe("exact");
+    // 4 da 20 per lato = 80 per lato = 180 kg: oltre, non ci sono piu' dischi grandi
+    expect(solvePlates(300, 20, inventory).status).toBe("inexact");
+  });
+
+  it("una voce assente o assurda vale zero, non NaN", () => {
+    const inventory = toPlateInventory({ "20": -4, "15": Number.NaN });
+    expect(inventory[20]).toBe(0);
+    expect(inventory[15]).toBe(0);
+    expect(inventory[10]).toBe(0);
   });
 });
 

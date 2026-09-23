@@ -4,7 +4,8 @@ import { computeSessionPRs, rebuildPersonalRecords } from "./pr-ops";
 import { previousSetsFor } from "./queries";
 import {
   DEFAULT_SETTINGS,
-  normalizeName,
+  EQUIPMENT_LOAD_MODE,
+  exerciseKey,
   type Equipment,
   type Exercise,
   type ID,
@@ -56,19 +57,30 @@ export async function createExercise(
   db: LiftedDB,
   input: ExerciseInput,
 ): Promise<Exercise> {
-  const nameKey = normalizeName(input.name);
   const exercise: Exercise = {
     id: newId(),
     name: input.name.trim(),
-    nameKey,
+    // L'attrezzo entra nella chiave (§9.4): «Panca piana» ai manubri e al bilanciere
+    // sono due esercizi diversi anche quando l'utente li chiama allo stesso modo.
+    nameKey: exerciseKey(input.name, input.equipment),
     muscleGroup: input.muscleGroup,
     secondaryMuscles: input.secondaryMuscles ?? [],
     equipment: input.equipment,
     isCustom: true,
-    isBodyweight: input.isBodyweight ?? input.equipment === "bodyweight",
+    isBodyweight: input.isBodyweight ?? isBodyweightEquipment(input.equipment),
     notes: input.notes?.trim() || undefined,
     defaultRestSec: input.defaultRestSec,
     createdAt: nowIso(),
+    /*
+      Un esercizio dell'utente non entra in una famiglia: §9.4 vuole che i
+      personalizzati restino sotto «Personalizzati», e inventargli una famiglia
+      significherebbe esporlo al seed, che li aggiornerebbe come voci di libreria.
+    */
+    family: "",
+    mechanics: "compound",
+    unilateral: false,
+    loadMode: EQUIPMENT_LOAD_MODE[input.equipment] ?? "external",
+    popularity: 50,
   };
 
   try {
@@ -87,11 +99,12 @@ export async function updateExercise(
   try {
     await db.exercises.update(id, {
       name: input.name.trim(),
-      nameKey: normalizeName(input.name),
+      nameKey: exerciseKey(input.name, input.equipment),
       muscleGroup: input.muscleGroup,
       equipment: input.equipment,
       secondaryMuscles: input.secondaryMuscles ?? [],
-      isBodyweight: input.isBodyweight ?? input.equipment === "bodyweight",
+      isBodyweight: input.isBodyweight ?? isBodyweightEquipment(input.equipment),
+      loadMode: EQUIPMENT_LOAD_MODE[input.equipment] ?? "external",
       notes: input.notes?.trim() || undefined,
       defaultRestSec: input.defaultRestSec,
     });
@@ -214,6 +227,13 @@ function normalizeRoutineExercises(exercises: RoutineExercise[]): RoutineExercis
 
 export interface StartSessionInput {
   routineId?: ID;
+  /**
+   * «Ripeti come sessione» dal menu di una card del feed (§4.21): la sessione nuova
+   * nasce con gli **stessi esercizi e lo stesso numero di serie** di quella passata,
+   * campi vuoti e colonna PRECEDENTE gia' riempita. Non si copiano i valori: quello
+   * che si e' fatto la volta scorsa e' un suggerimento, non un dato da ri-salvare.
+   */
+  fromSessionId?: ID;
 }
 
 /**
@@ -226,23 +246,43 @@ export async function startSession(
 ): Promise<Session> {
   const settings = await ensureSettings(db);
   const routine = input.routineId ? await db.routines.get(input.routineId) : undefined;
+  const source = input.fromSessionId
+    ? await db.sessions.get(input.fromSessionId)
+    : undefined;
+
+  /*
+    Una sessione passata si comporta come una routine improvvisata: stessi esercizi,
+    stesso numero di serie, stesso tipo. Tradurla in `RoutineExercise[]` evita di
+    duplicare tutto il ramo di costruzione qui sotto.
+  */
+  const template: RoutineExercise[] | undefined = source
+    ? source.exercises.map((exercise, order) => ({
+        exerciseId: exercise.exerciseId,
+        exerciseName: exercise.exerciseName,
+        order,
+        notes: exercise.notes,
+        restSec: exercise.restSec,
+        sets: exercise.sets.map((set) => ({ type: set.type })),
+      }))
+    : undefined;
+
+  const plan = routine?.exercises ?? template ?? [];
 
   // Le letture "volta scorsa" stanno fuori dalla transazione di scrittura: sono
   // indipendenti fra loro e si fanno in parallelo.
   const previousByExercise = new Map<ID, Awaited<ReturnType<typeof previousSetsFor>>>();
-  if (routine) {
-    const unique = [...new Set(routine.exercises.map((item) => item.exerciseId))];
+  if (plan.length > 0) {
+    const unique = [...new Set(plan.map((item) => item.exerciseId))];
     const results = await Promise.all(
       unique.map((exerciseId) => previousSetsFor(db, exerciseId)),
     );
     unique.forEach((exerciseId, i) => previousByExercise.set(exerciseId, results[i]));
   }
 
-  const catalogue = routine
-    ? await db.exercises.bulkGet([
-        ...new Set(routine.exercises.map((item) => item.exerciseId)),
-      ])
-    : [];
+  const catalogue =
+    plan.length > 0
+      ? await db.exercises.bulkGet([...new Set(plan.map((item) => item.exerciseId))])
+      : [];
   const equipmentById = new Map<ID, Equipment>();
   for (const exercise of catalogue) {
     if (exercise) equipmentById.set(exercise.id, exercise.equipment);
@@ -252,11 +292,11 @@ export async function startSession(
   const session: Session = recalc({
     id: newId(),
     routineId: routine?.id,
-    routineName: routine?.name,
+    routineName: routine?.name ?? source?.routineName,
     startedAt,
     status: "active",
     pausedMs: 0,
-    exercises: (routine?.exercises ?? []).map((item, order) => {
+    exercises: plan.map((item, order) => {
       const previous = previousByExercise.get(item.exerciseId) ?? [];
       return {
         id: newId(),
@@ -404,6 +444,39 @@ export async function discardSession(db: LiftedDB): Promise<void> {
  * conteneva: volume, serie e PR calcolati da quella sessione non possono sopravviverle
  * (§5.2, "verranno ricalcolati").
  */
+/**
+ * «Salva come routine» dal menu di una card del feed (§4.21).
+ *
+ * Il nome prende un suffisso con la data: due allenamenti liberi salvati nello stesso
+ * giorno avrebbero lo stesso nome, e una lista di routine con tre «Sessione libera»
+ * dentro non serve a nessuno. I **pesi non si copiano**: una routine e' un piano, non
+ * un verbale.
+ */
+export async function routineFromSession(
+  db: LiftedDB,
+  sessionId: ID,
+): Promise<Routine | null> {
+  const session = await db.sessions.get(sessionId);
+  if (!session) return null;
+
+  const giorno = new Date(session.startedAt);
+  const stamp = `${String(giorno.getDate()).padStart(2, "0")}/${String(
+    giorno.getMonth() + 1,
+  ).padStart(2, "0")}`;
+
+  return createRoutine(db, {
+    name: `${session.routineName ?? "Sessione libera"} · ${stamp}`,
+    exercises: session.exercises.map((exercise, order) => ({
+      exerciseId: exercise.exerciseId,
+      exerciseName: exercise.exerciseName,
+      order,
+      notes: exercise.notes,
+      restSec: exercise.restSec,
+      sets: exercise.sets.map((set) => ({ type: set.type })),
+    })),
+  });
+}
+
 export async function deleteSession(db: LiftedDB, id: ID): Promise<void> {
   const settings = await ensureSettings(db);
   const session = await db.sessions.get(id);
@@ -480,4 +553,13 @@ export async function updateSettings(
   const next = { ...current, ...patch, id: "singleton" as const };
   await db.settings.put(next);
   return next;
+}
+
+/**
+ * Corpo libero per default: corpo libero puro, zavorrato e macchina assistita partono
+ * tutti dal presupposto che il campo KG non sia il peso sollevato ma un'aggiunta o uno
+ * sconto. `EQUIPMENT_LOAD_MODE` dice quale dei tre.
+ */
+function isBodyweightEquipment(equipment: Equipment): boolean {
+  return EQUIPMENT_LOAD_MODE[equipment] !== undefined;
 }

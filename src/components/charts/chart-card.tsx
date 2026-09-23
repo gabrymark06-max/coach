@@ -41,9 +41,15 @@ export function ChartFrame({
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 id={titleId} className="text-h3 text-[var(--text-primary)]">
+          {/*
+            `h2`, non `h3` (QA MINORE 6, regola axe `heading-order`): una card grafico
+            e' una **sezione di primo livello** della pagina, e sotto l'`h1` della rotta
+            un `h3` salta un gradino. La scala tipografica resta `text-h3`: il livello
+            dice la gerarchia, la classe dice la misura, e non sono la stessa cosa.
+          */}
+          <h2 id={titleId} className="text-h3 text-[var(--text-primary)]">
             {title}
-          </h3>
+          </h2>
           {subtitle ? (
             <p className="mt-1 text-sm text-[var(--text-secondary)]">{subtitle}</p>
           ) : null}

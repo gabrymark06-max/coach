@@ -5,7 +5,14 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
+import {
+  ExerciseLibraryRail,
+  TornaAllElenco,
+  VaiAllElenco,
+} from "@/components/exercises/exercise-library-rail";
 import { PageHeader } from "@/components/shared/page-header";
+import { announce } from "@/lib/announce";
+import { useHasRightRail } from "@/lib/hooks/use-media-query";
 import { Async, EmptyState, ListSkeleton } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -54,6 +61,7 @@ export function DettaglioEsercizioView() {
   const mounted = useMounted();
   const [deleting, setDeleting] = React.useState(false);
 
+  const hasRail = useHasRightRail();
   const state = useLiveData(() => getExercise(getDb(), id), [id]);
   const history = useLiveData(() => completedSetsHistory(getDb(), id), [id]);
   const records = useLiveData(() => personalRecordsForExercise(getDb(), id), [id]);
@@ -66,6 +74,19 @@ export function DettaglioEsercizioView() {
     () => bestE1rm(history.data ?? [], settings.e1rmFormula),
     [history.data, settings.e1rmFormula],
   );
+
+  /*
+    §8.10 — alla selezione il fuoco va sull'`h1` del dettaglio e `#sr-system` annuncia
+    l'apertura. Senza, chi sceglie dall'elenco a destra resta con il fuoco a destra e
+    non sa che al centro e' cambiato tutto. Solo a due pannelli: sotto 1280 il dettaglio
+    e' una pagina nuova, e li' ci pensa il router.
+  */
+  const nome = state.status === "ready" ? state.data?.name : undefined;
+  React.useEffect(() => {
+    if (!hasRail || !nome) return;
+    document.getElementById("titolo-pagina")?.focus();
+    announce("system", `${nome}, dettaglio aperto`);
+  }, [hasRail, nome]);
 
   return (
     <Async
@@ -92,7 +113,10 @@ export function DettaglioEsercizioView() {
       {(exercise) =>
         exercise ? (
           <>
+            {/* §4.26: il primo elemento focalizzabile della colonna centrale */}
+            <VaiAllElenco />
             <PageHeader
+              focusable
               title={exercise.name}
               action={
                 exercise.isCustom ? (
@@ -178,6 +202,8 @@ export function DettaglioEsercizioView() {
                       series={SERIE_1RM}
                       xKey="date"
                       yUnit="kg"
+                      domainMode="level"
+                      unitStep={0.5}
                       formatX={(value) => formatDay(value)}
                       formatTooltipLabel={(value) => formatFull(value)}
                       formatValue={(value) => `${formatKgValue(value)} kg`}
@@ -259,7 +285,12 @@ export function DettaglioEsercizioView() {
                   )}
                 </Async>
               </section>
+
+              {/* sempre visibile, in fondo al pannello dettaglio (§4.26) */}
+              <TornaAllElenco />
             </div>
+
+            <ExerciseLibraryRail selectedId={exercise.id} basePath={`/esercizi/${exercise.id}`} />
 
             <ConfirmDialog
               open={deleting}

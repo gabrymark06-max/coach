@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { animazioniFinite, preparaApp } from "./helpers";
+import { ESERCIZIO, animazioniFinite, apriEsercizio, preparaApp } from "./helpers";
 
 /**
  * Il secondo intervento, percorso davvero: un allenamento che genera un record, un
@@ -8,7 +8,7 @@ import { animazioniFinite, preparaApp } from "./helpers";
  * dettaglio dell'esercizio e nelle statistiche.
  */
 
-async function creaRoutine(page: Page, nome: string, ricerca: string, etichetta: RegExp) {
+async function creaRoutine(page: Page, nome: string, ricerca: string, etichetta: string | RegExp) {
   await page.goto("/allenamento/routine/nuova");
   await page.getByLabel("Nome della routine").fill(nome);
   await page.getByRole("button", { name: "Aggiungi esercizi" }).click();
@@ -33,7 +33,7 @@ async function allena(page: Page, weightKg: string, reps: string) {
 
 test("un record scatta, si annuncia e si ritrova ovunque", async ({ page }) => {
   await preparaApp(page);
-  await creaRoutine(page, "Push A", "panca piana con bilanciere", /Panca piana con bilanciere/);
+  await creaRoutine(page, "Push A", ESERCIZIO, ESERCIZIO);
 
   // --- primo allenamento: tre record, nessun precedente ----------------------
   await allena(page, "100", "5");
@@ -56,13 +56,18 @@ test("un record scatta, si annuncia e si ritrova ovunque", async ({ page }) => {
   await expect(page.getByText("128,33 kg").first()).toBeVisible();
   await page.getByRole("button", { name: "Fatto" }).click();
 
-  // --- storico: la riga porta il conteggio dei record ------------------------
+  /*
+    Storico: in v2 la riga e' una `WorkoutFeedCard` (§4.21) e il conteggio dei record
+    e' `Trophy` + numero sotto l'etichetta «Record», mai l'emoji del riferimento.
+  */
   await page.goto("/profilo");
   await expect(page.getByRole("heading", { name: "Storico" })).toBeVisible();
-  await expect(page.getByText("2 PR").first()).toBeVisible();
+  const card = page.getByRole("article").first();
+  await expect(card.getByText("Record")).toBeVisible();
+  await expect(card.getByText("2", { exact: true })).toBeVisible();
 
   // --- dettaglio della sessione passata --------------------------------------
-  await page.getByRole("link", { name: /Push A/ }).first().click();
+  await card.getByRole("link", { name: /Push A/ }).first().click();
   await expect(page).toHaveURL(/\/profilo\/sessione\//);
   await expect(page.getByRole("heading", { name: "Esercizi" })).toBeVisible();
   await expect(page.getByText("PR 1RM").first()).toBeVisible();
@@ -74,8 +79,7 @@ test("un record scatta, si annuncia e si ritrova ovunque", async ({ page }) => {
   await expect(page.getByText("PR 1RM").first()).toBeVisible();
 
   // --- dettaglio esercizio: i tre record correnti ----------------------------
-  await page.goto("/esercizi");
-  await page.getByRole("link", { name: /Panca piana con bilanciere/ }).click();
+  await apriEsercizio(page, ESERCIZIO);
   await expect(page.getByRole("heading", { name: "Record personali" })).toBeVisible();
   // il chip porta la parola e il numero in due elementi: si guarda il chip intero
   await expect(page.getByText("PR 1RM").first()).toBeVisible();
@@ -86,15 +90,15 @@ test("eliminare l'allenamento del record riporta il record a quello di prima", a
   page,
 }) => {
   await preparaApp(page);
-  await creaRoutine(page, "Pull A", "stacco da terra", /Stacco da terra/);
+  // con la libreria allargata «Stacco da terra» esiste con tre attrezzi: si sceglie
+  await creaRoutine(page, "Pull A", "Stacco da terra (Bilanciere)", /^Stacco da terra \(Bilanciere\)/);
 
   await allena(page, "100", "5");
   await page.getByRole("button", { name: "Fatto" }).click();
   await allena(page, "140", "5");
   await page.getByRole("button", { name: "Fatto" }).click();
 
-  await page.goto("/esercizi");
-  await page.getByRole("link", { name: /Stacco da terra/ }).click();
+  await apriEsercizio(page, "Stacco da terra (Bilanciere)");
   await expect(page.getByText("163,33").first()).toBeVisible();
 
   // si elimina l'allenamento migliore dallo storico
@@ -104,8 +108,7 @@ test("eliminare l'allenamento del record riporta il record a quello di prima", a
   await page.getByRole("button", { name: "Elimina", exact: true }).click();
   await expect(page).toHaveURL(/\/profilo$/);
 
-  await page.goto("/esercizi");
-  await page.getByRole("link", { name: /Stacco da terra/ }).click();
+  await apriEsercizio(page, "Stacco da terra (Bilanciere)");
   await expect(page.getByText("116,67").first()).toBeVisible();
   await expect(page.getByText("163,33")).toHaveCount(0);
 });
@@ -152,9 +155,8 @@ test("misure: inserimento, grafico, modifica ed eliminazione", async ({ page }) 
 
 test("impostazioni: recupero, RPE e inventario dei dischi si salvano", async ({ page }) => {
   await preparaApp(page);
-  await page.goto("/impostazioni");
-
-  await expect(page.getByText("I tuoi dati restano su questo dispositivo.")).toBeVisible();
+  // v2: le impostazioni sono indice + pannello, una rotta per sezione (§4.28)
+  await page.goto("/impostazioni/allenamento");
 
   await page.getByLabel("Recupero predefinito").selectOption("120");
   await page.getByLabel("Colonna RPE").check();
@@ -170,11 +172,21 @@ test("impostazioni: recupero, RPE e inventario dei dischi si salvano", async ({ 
 
 test("axe: le schermate nuove, con dati veri", async ({ page }, testInfo) => {
   await preparaApp(page);
-  await creaRoutine(page, "Push A", "panca piana con bilanciere", /Panca piana con bilanciere/);
+  await creaRoutine(page, "Push A", ESERCIZIO, ESERCIZIO);
   await allena(page, "100", "5");
 
   // il riepilogo si guarda dove siamo gia', le altre si visitano
-  const rotte = ["/profilo", "/statistiche", "/misure", "/impostazioni", "/impostazioni/backup"];
+  const rotte = [
+    "/home",
+    "/profilo",
+    "/statistiche",
+    "/misure",
+    "/impostazioni",
+    "/impostazioni/allenamento",
+    "/impostazioni/app",
+    "/impostazioni/dati",
+    "/trainer",
+  ];
 
   await animazioniFinite(page);
   let risultato = await new AxeBuilder({ page })

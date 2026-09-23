@@ -14,7 +14,12 @@ import { ExerciseLinkRow } from "@/components/exercises/exercise-row";
 import { PageHeader } from "@/components/shared/page-header";
 import { Async, EmptyState, ListSkeleton } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
+import {
+  ExerciseLibraryRail,
+  VaiAllElenco,
+} from "@/components/exercises/exercise-library-rail";
 import { announce } from "@/lib/announce";
+import { useHasRightRail } from "@/lib/hooks/use-media-query";
 import { getDb } from "@/lib/db/db";
 import { listExercises } from "@/lib/db/queries";
 import type { Equipment, MuscleGroup } from "@/lib/db/schema";
@@ -31,6 +36,7 @@ import { useLiveData } from "@/lib/hooks/use-live-data";
 export function EserciziView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const hasRail = useHasRightRail();
 
   const filter = React.useMemo<ExerciseFilterValue>(
     () => ({
@@ -71,6 +77,29 @@ export function EserciziView() {
   ].filter(Boolean);
 
   const hasFilters = filterNames.length > 0 || filter.q !== "";
+
+  /*
+    §4.26 — a >=1280 la libreria diventa **due pannelli**: l'elenco con i filtri passa
+    nella colonna destra e il centro tiene il dettaglio. Qui, senza una voce scelta, il
+    centro mostra lo stato «Scegli un esercizio»: e' lo stato del riferimento, e va
+    implementato, non lasciato bianco.
+  */
+  if (hasRail) {
+    return (
+      <>
+        <VaiAllElenco />
+        <PageHeader title="Esercizio" />
+        <div className="app-container">
+          <EmptyState
+            icon={Dumbbell}
+            title="Scegli un esercizio"
+            line="Seleziona una voce dall'elenco per vedere storico, 1RM stimato e record."
+          />
+        </div>
+        <ExerciseLibraryRail basePath="/esercizi" />
+      </>
+    );
+  }
 
   return (
     <>

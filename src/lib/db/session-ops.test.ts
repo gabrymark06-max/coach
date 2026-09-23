@@ -10,6 +10,7 @@ import {
   removeExercise,
   replaceExercise,
   setDisplayNumber,
+  setSpokenName,
   toggleSetCompleted,
 } from "./session-ops";
 
@@ -209,6 +210,38 @@ describe("setDisplayNumber", () => {
       { type: "normal" as const },
     ];
     expect(sets.map((_, i) => setDisplayNumber(sets, i))).toEqual([null, null, 1, 2, 3]);
+  });
+});
+
+/**
+ * QA MINORE 4: il nome accessibile diceva «Riscaldamento (W), tipo: riscaldamento (w)».
+ * Il nome porta la posizione, il tipo lo dice chi lo compone: mai due volte, mai con
+ * la sigla della cella dentro il parlato.
+ */
+describe("setSpokenName", () => {
+  const sets = [
+    { type: "warmup" as const },
+    { type: "warmup" as const },
+    { type: "normal" as const },
+    { type: "drop" as const },
+    { type: "normal" as const },
+  ];
+
+  it("le serie allenanti si chiamano con il loro numero", () => {
+    expect(setSpokenName(sets, 2)).toBe("serie 1");
+    expect(setSpokenName(sets, 3)).toBe("serie 2");
+    expect(setSpokenName(sets, 4)).toBe("serie 3");
+  });
+
+  it("i riscaldamenti hanno una numerazione propria e non rubano la prima serie", () => {
+    expect(setSpokenName(sets, 0)).toBe("riscaldamento 1");
+    expect(setSpokenName(sets, 1)).toBe("riscaldamento 2");
+  });
+
+  it("non contiene mai la sigla della cella", () => {
+    for (let i = 0; i < sets.length; i += 1) {
+      expect(setSpokenName(sets, i)).not.toMatch(/\(/);
+    }
   });
 });
 

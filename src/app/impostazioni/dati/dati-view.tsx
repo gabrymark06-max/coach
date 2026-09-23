@@ -4,7 +4,9 @@ import { AlertTriangle, Download, FileSpreadsheet, Upload } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { LocalDataBanner } from "@/components/settings/controls";
-import { PageHeader } from "@/components/shared/page-header";
+import { SettingsPanelHeader } from "@/components/settings/settings-two-pane";
+import { useIsDesktop } from "@/lib/hooks/use-media-query";
+import { cn } from "@/lib/utils";
 import { Async, EmptyState } from "@/components/shared/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -27,7 +29,12 @@ import {
 } from "@/lib/db/backup-ops";
 import { getDb } from "@/lib/db/db";
 import { updateSettings } from "@/lib/db/mutations";
-import { formatFull, formatInt } from "@/lib/format";
+import {
+  formatFull,
+  formatInt,
+  formatMeasurementCount,
+  formatSessionCount,
+} from "@/lib/format";
 import { useLiveData } from "@/lib/hooks/use-live-data";
 import { useMounted } from "@/lib/hooks/use-now";
 import { useSettings } from "@/lib/session-context";
@@ -57,7 +64,7 @@ function ContenutoSkeleton() {
 }
 
 /**
- * `/impostazioni/backup` — spec §3.7, design system §6.5.
+ * `/impostazioni/dati` — spec §3.7, design system §6.5.
  *
  * Export e import sono **funzioni di prima classe**: i dati vivono solo qui, e il file
  * e' l'unica rete di sicurezza. Da cui tre scelte visibili in questa schermata:
@@ -68,9 +75,10 @@ function ContenutoSkeleton() {
  *    non e' saltabile e offre `Esporta prima`;
  *  - JSON e CSV hanno scopi diversi e si dicono: il JSON si rilegge, il CSV si guarda.
  */
-export function BackupView() {
+export function DatiView() {
   const settings = useSettings();
   const mounted = useMounted();
+  const desktop = useIsDesktop();
 
   const counts = useLiveData(() => tableCounts(getDb()), []);
   const [pending, setPending] = React.useState<LiftedBackup | null>(null);
@@ -145,7 +153,9 @@ export function BackupView() {
     try {
       const result = await restoreBackup(getDb(), pending);
       setPending(null);
-      const frase = `Importati ${formatInt(result.counts.sessions)} allenamenti e ${formatInt(result.counts.measurements)} misurazioni`;
+      const frase =
+        `${result.counts.sessions === 1 ? "Importato" : "Importati"} ${formatSessionCount(result.counts.sessions)}` +
+        ` e ${formatMeasurementCount(result.counts.measurements)}`;
       toast.success(frase);
       announce("system", `${frase}.`);
     } catch {
@@ -159,9 +169,17 @@ export function BackupView() {
 
   return (
     <>
-      <PageHeader title="Backup e ripristino" />
+      <SettingsPanelHeader
+        title="Backup ed esportazione"
+        description="I dati vivono solo qui: il file di export è l'unica rete di sicurezza."
+      />
 
-      <div className="app-container flex flex-col gap-8 pb-8">
+      <div
+        className={cn(
+          "flex flex-col gap-8 pb-8",
+          desktop ? "" : "app-container",
+        )}
+      >
         <LocalDataBanner
           lastExportAt={
             settings.lastExportAt && mounted ? formatFull(settings.lastExportAt) : null
@@ -226,7 +244,12 @@ export function BackupView() {
             <strong className="text-[var(--text-primary)]">CSV</strong> serve a guardare i
             dati altrove — si apre in Excel senza aggiustamenti.
           </p>
-          <div className="flex flex-col gap-3 md:flex-row">
+          {/*
+            `flex-wrap`: da 1024 in su questi pulsanti vivono dentro il pannello delle
+            impostazioni, largo ~420px, e tre bottoni a larghezza naturale in riga
+            sfondavano di 26px. Vanno a capo invece di tagliare la pagina.
+          */}
+          <div className="flex flex-col gap-3 md:flex-row md:flex-wrap">
             <Button
               block
               className="md:w-auto"
@@ -338,8 +361,8 @@ export function BackupView() {
                   Il file contiene
                 </span>
                 <span className="tnum mt-2 block text-base text-[var(--text-primary)]">
-                  {formatInt(pending.counts.sessions)} allenamenti ·{" "}
-                  {formatInt(pending.counts.measurements)} misurazioni ·{" "}
+                  {formatSessionCount(pending.counts.sessions)} ·{" "}
+                  {formatMeasurementCount(pending.counts.measurements)} ·{" "}
                   {formatInt(pending.counts.routines)} routine ·{" "}
                   {formatInt(pending.counts.exercises)} esercizi
                 </span>

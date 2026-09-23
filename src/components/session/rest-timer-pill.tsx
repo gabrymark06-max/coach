@@ -163,7 +163,11 @@ export function RestTimerPill() {
                 ? "Riprendi il recupero"
                 : `Metti in pausa il recupero, ${speakDuration(remaining)} rimanenti`
             }
-            className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+            /*
+              QA MINORE 5: era alto 42px. §8.7 chiede 48 dentro `/sessione`, ed e' il
+              controllo che si tocca con le mani sudate fra una serie e l'altra.
+            */
+            className="flex min-h-[var(--tap-gym)] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] py-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
           >
             <span className="flex items-center gap-2">
               {paused ? (

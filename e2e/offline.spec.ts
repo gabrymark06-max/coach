@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { chiudiAvvisoIniziale } from "./helpers";
+import { ESERCIZIO, chiudiAvvisoIniziale } from "./helpers";
 
 /**
  * L'app non ha una rete da cui dipendere: deve aprirsi e funzionare senza connessione.
@@ -77,13 +77,13 @@ test.describe("offline", () => {
     await context.setOffline(true);
     try {
       await page.goto("/allenamento");
-      await page.getByRole("button", { name: "Avvia sessione vuota" }).click();
+      await page.getByRole("button", { name: "Avvia allenamento" }).click();
       await expect(page).toHaveURL(/\/sessione/, { timeout: 20_000 });
 
       await page.getByRole("button", { name: "Aggiungi esercizio" }).click();
       const foglio = page.getByRole("dialog");
-      await foglio.getByRole("searchbox", { name: "Cerca un esercizio" }).fill("panca piana con bilanciere");
-      await foglio.getByRole("checkbox", { name: /Panca piana con bilanciere/ }).click();
+      await foglio.getByRole("searchbox", { name: "Cerca un esercizio" }).fill(ESERCIZIO);
+      await foglio.getByRole("checkbox", { name: ESERCIZIO }).click();
       await foglio.getByRole("button", { name: "Aggiungi 1 esercizio" }).click();
 
       await page.getByLabel(/Peso in chili, serie 1,/).first().fill("90");
@@ -93,12 +93,12 @@ test.describe("offline", () => {
       await page.getByRole("button", { name: "Termina", exact: true }).click();
 
       await expect(page).toHaveURL(/\/sessione\/riepilogo\//, { timeout: 20_000 });
-      await expect(page.getByRole("heading", { name: "Allenamento salvato" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /^Riepilogo/, level: 1 })).toBeVisible();
       await expect(page.getByText("PR 1RM").first()).toBeVisible();
 
       // ricarica dura, sempre offline: il dato viene da IndexedDB, la scocca dalla precache
       await page.reload();
-      await expect(page.getByRole("heading", { name: "Allenamento salvato" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /^Riepilogo/, level: 1 })).toBeVisible();
       await expect(page.getByRole("definition").filter({ hasText: "540" })).toBeVisible();
     } finally {
       await context.setOffline(false);

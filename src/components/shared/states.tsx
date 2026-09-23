@@ -20,6 +20,7 @@ export function EmptyState({
   action,
   secondary,
   className,
+  level = 2,
 }: {
   icon: LucideIcon;
   title: string;
@@ -27,7 +28,10 @@ export function EmptyState({
   action?: React.ReactNode;
   secondary?: React.ReactNode;
   className?: string;
+  /** livello del titolo: `2` di default, `3` dentro una sezione che ha gia' un `h2` */
+  level?: 2 | 3;
 }) {
+  const Heading = level === 3 ? "h3" : "h2";
   return (
     <div
       className={cn(
@@ -36,7 +40,12 @@ export function EmptyState({
       )}
     >
       <Icon aria-hidden="true" className="size-10 text-[var(--text-muted)]" strokeWidth={1.75} />
-      <h3 className="text-h3 text-[var(--text-primary)]">{title}</h3>
+      {/*
+        `h2` per lo stesso motivo del grafico (QA MINORE 6): uno stato vuoto e' il
+        contenuto principale della sua sezione, e sotto l'`h1` della rotta un `h3`
+        salta un gradino. Quando serve annidarlo piu' in basso, `level` lo abbassa.
+      */}
+      <Heading className="text-h3 text-[var(--text-primary)]">{title}</Heading>
       <p className="text-base text-[var(--text-secondary)]">{line}</p>
       {action ? <div className="mt-2 w-full">{action}</div> : null}
       {secondary ? <div className="w-full">{secondary}</div> : null}

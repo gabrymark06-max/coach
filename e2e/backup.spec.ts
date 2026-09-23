@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { preparaApp } from "./helpers";
+import { ESERCIZIO, preparaApp } from "./helpers";
 
 /**
  * Export e import sono funzioni di prima classe (spec §3.7): il file e' l'unica rete di
@@ -52,8 +52,8 @@ test("export JSON, database svuotato, import: i dati tornano identici", async ({
   await page.getByLabel("Nome della routine").fill("Push A");
   await page.getByRole("button", { name: "Aggiungi esercizi" }).click();
   const foglio = page.getByRole("dialog");
-  await foglio.getByRole("searchbox", { name: "Cerca un esercizio" }).fill("panca piana con bilanciere");
-  await foglio.getByRole("checkbox", { name: /Panca piana con bilanciere/ }).click();
+  await foglio.getByRole("searchbox", { name: "Cerca un esercizio" }).fill(ESERCIZIO);
+  await foglio.getByRole("checkbox", { name: ESERCIZIO }).click();
   await foglio.getByRole("button", { name: "Aggiungi 1 esercizio" }).click();
   await page.getByRole("button", { name: "Salva routine" }).click();
   await expect(page).toHaveURL(/\/allenamento$/);
@@ -79,7 +79,7 @@ test("export JSON, database svuotato, import: i dati tornano identici", async ({
   expect(prima.measurements).toHaveLength(1);
 
   // --- export --------------------------------------------------------------
-  await page.goto("/impostazioni/backup");
+  await page.goto("/impostazioni/dati");
   await expect(page.getByRole("heading", { name: "Cosa contiene il backup" })).toBeVisible();
   const [download] = await Promise.all([
     page.waitForEvent("download"),
@@ -103,8 +103,11 @@ test("export JSON, database svuotato, import: i dati tornano identici", async ({
   // la conferma non e' saltabile e dice cosa sta per sovrascrivere
   const conferma = page.getByRole("alertdialog");
   await expect(conferma).toContainText("Sostituire tutti i dati?");
-  await expect(conferma).toContainText("1 allenamenti");
-  await expect(conferma).toContainText("1 misurazioni");
+  // QA MINORE 2: gli accordi al singolare, adesso che esistono
+  await expect(conferma).toContainText("1 allenamento");
+  await expect(conferma).toContainText("1 misurazione");
+  // e il formato e' salito a 2 (§9.5)
+  await expect(conferma).toContainText("formato versione 2");
   await page.getByRole("button", { name: "Sostituisci" }).click();
   await page.waitForTimeout(1500);
 
@@ -118,7 +121,7 @@ test("export JSON, database svuotato, import: i dati tornano identici", async ({
 
 test("un file che non e' un backup viene rifiutato senza toccare i dati", async ({ page }) => {
   await preparaApp(page);
-  await page.goto("/impostazioni/backup");
+  await page.goto("/impostazioni/dati");
 
   await page.setInputFiles("#file-backup", {
     name: "qualcosa.json",
@@ -144,7 +147,7 @@ test("export CSV: tre file, con il separatore giusto per Excel italiano", async 
   await page.getByRole("button", { name: "Salva" }).click();
   await page.waitForTimeout(500);
 
-  await page.goto("/impostazioni/backup");
+  await page.goto("/impostazioni/dati");
   const scaricati: string[] = [];
   page.on("download", (d) => scaricati.push(d.suggestedFilename()));
   const [misure] = await Promise.all([

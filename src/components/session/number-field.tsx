@@ -195,17 +195,31 @@ export function NumberField({
 }
 
 /**
- * Ordine di focus della riga serie (§8.4): KG → REPS → RPE → check → KG della serie
- * successiva. Si naviga il DOM invece di tenere una lista di ref, cosi' l'ordine di
- * tabulazione e quello di `Invio` non possono divergere.
+ * Ordine di focus della riga serie (§8.4): KG → REPS → RPE (solo se attivo) → check →
+ * KG della serie successiva. Si naviga il DOM invece di tenere una lista di ref, cosi'
+ * l'ordine di tabulazione e quello di `Invio` non possono divergere.
+ *
+ * **QA GRAVE 4.** Il filtro era su `disabled`, ma a 375px la cella RPE e'
+ * `display: none` con dentro un `<select>` abilitato: la catena ci finiva sopra e
+ * `.focus()` su un nodo invisibile non fa niente, in silenzio. Il fuoco si fermava su
+ * REPS e l'unico shortcut del sistema moriva li'. Adesso si filtra per **visibilita'
+ * reale**, che e' la proprieta' che conta: un campo che non si vede non e' un campo.
  */
 export function focusNextField(current: HTMLElement): void {
   const nodes = Array.from(
     document.querySelectorAll<HTMLElement>("[data-set-focus]"),
-  ).filter((node) => !node.hasAttribute("disabled"));
+  ).filter(isReachable);
   const index = nodes.indexOf(current);
   if (index === -1) return;
   const next = nodes[index + 1];
   next?.focus();
   if (next instanceof HTMLInputElement) next.select();
+}
+
+function isReachable(node: HTMLElement): boolean {
+  if (node.hasAttribute("disabled")) return false;
+  // `checkVisibility` risponde anche per un antenato con `display:none`, che e'
+  // esattamente il caso della cella RPE nascosta dalla media query.
+  if (typeof node.checkVisibility === "function") return node.checkVisibility();
+  return node.getClientRects().length > 0;
 }

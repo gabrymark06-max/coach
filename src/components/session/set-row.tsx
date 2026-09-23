@@ -9,7 +9,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SET_TYPE_LABEL, type SetEntry, type SetType } from "@/lib/db/schema";
+import {
+  SET_TYPE_LABEL,
+  SET_TYPE_SPEECH,
+  type SetEntry,
+  type SetType,
+} from "@/lib/db/schema";
 import { formatKgValue, speakSet } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { focusNextField, NumberField } from "./number-field";
@@ -33,6 +38,8 @@ const RPE_VALUES = Array.from({ length: 19 }, (_, i) => 1 + i * 0.5);
 export interface SetRowProps {
   set: SetEntry;
   displayNumber: number | null;
+  /** nome parlato della riga (§8.3): `serie 1`, `riscaldamento 2` */
+  spokenName: string;
   exerciseName: string;
   showRpe: boolean;
   stepKg: number;
@@ -58,6 +65,7 @@ export interface SetRowProps {
 export const SetRow = React.memo(function SetRow({
   set,
   displayNumber,
+  spokenName,
   exerciseName,
   showRpe,
   stepKg,
@@ -72,9 +80,18 @@ export const SetRow = React.memo(function SetRow({
 }: SetRowProps) {
   const glyph = TYPE_GLYPH[set.type];
   const indexLabel = glyph ?? String(displayNumber ?? set.index);
-  const setName = glyph
-    ? `${SET_TYPE_LABEL[set.type]}`
-    : `Serie ${displayNumber ?? set.index}`;
+  /**
+   * QA MINORE 4. Il nome della riga porta **la posizione**, non il tipo: il tipo lo
+   * aggiunge solo chi ne ha bisogno, una volta sola e in lettere. Prima usciva
+   * «Riscaldamento (W), tipo: riscaldamento (w)» — la sigla della cella finita nel
+   * parlato, e il tipo detto due volte.
+   */
+  const setName = spokenName;
+  const typeSpeech = SET_TYPE_SPEECH[set.type];
+  const menuLabel =
+    set.type === "normal" || set.type === "warmup"
+      ? `${capitalize(setName)}. Cambia tipo o elimina`
+      : `${capitalize(setName)}, tipo: ${typeSpeech}. Cambia tipo o elimina`;
 
   const hasPrevious = set.prevWeightKg != null || set.prevReps != null;
   const previousText = hasPrevious
@@ -105,7 +122,7 @@ export const SetRow = React.memo(function SetRow({
         <DropdownMenu>
           <DropdownMenuTrigger
             disabled={readOnly}
-            aria-label={`${setName}, tipo: ${SET_TYPE_LABEL[set.type].toLowerCase()}. Cambia tipo o elimina`}
+            aria-label={menuLabel}
             className={cn(
               "inline-flex size-12 items-center justify-center rounded-[var(--radius-xs)]",
               "font-display text-sm font-bold",
@@ -162,7 +179,7 @@ export const SetRow = React.memo(function SetRow({
           value={set.weightKg}
           onCommit={(value) => onPatch({ weightKg: value })}
           placeholder={set.prevWeightKg != null ? formatKgValue(set.prevWeightKg) : undefined}
-          label={`Peso in chili, ${setName.toLowerCase()}, ${exerciseName}`}
+          label={`Peso in chili, ${setName}, ${exerciseName}`}
           disabled={readOnly}
           error={error}
           extraAction={{ label: "Dischi", onSelect: onOpenPlates }}
@@ -177,18 +194,24 @@ export const SetRow = React.memo(function SetRow({
           value={set.reps}
           onCommit={(value) => onPatch({ reps: value })}
           placeholder={set.prevReps != null ? String(set.prevReps) : undefined}
-          label={`Ripetizioni, ${setName.toLowerCase()}, ${exerciseName}`}
+          label={`Ripetizioni, ${setName}, ${exerciseName}`}
           disabled={readOnly}
         />
       </td>
 
-      {/* RPE — opzionale a 375, sempre visibile da 768 (§7.2) */}
+      {/*
+        RPE — opzionale a 375, sempre visibile da 768 (§7.2).
+        `data-set-focus` solo quando la colonna e' **attiva nelle impostazioni**: §8.4
+        mette l'RPE nella catena di `Invio` «solo se attivo», e a 768 la colonna resta
+        a schermo per comodita' di compilazione anche da spenta. Tabulare ci arriva
+        comunque; `Invio` no, e cosi' la catena porta al check dove deve (QA GRAVE 4).
+      */}
       <td className={cn("p-0 pl-2", showRpe ? "" : "hidden md:table-cell")}>
         <select
-          data-set-focus=""
+          {...(showRpe ? { "data-set-focus": "" } : {})}
           value={set.rpe == null ? "" : String(set.rpe)}
           disabled={readOnly}
-          aria-label={`RPE da 1 a 10, ${setName.toLowerCase()}, ${exerciseName}`}
+          aria-label={`RPE da 1 a 10, ${setName}, ${exerciseName}`}
           onChange={(event) =>
             onPatch({ rpe: event.target.value === "" ? null : Number(event.target.value) })
           }
@@ -215,7 +238,7 @@ export const SetRow = React.memo(function SetRow({
           data-set-focus=""
           aria-checked={set.completed}
           disabled={readOnly}
-          aria-label={`Completa ${setName.toLowerCase()} di ${exerciseName}, ${speakSet(set.weightKg, set.reps)}`}
+          aria-label={`Completa ${setName} di ${exerciseName}, ${speakSet(set.weightKg, set.reps)}`}
           onClick={(event) => {
             onToggleComplete(!set.completed);
             if (!set.completed) focusNextField(event.currentTarget);
@@ -243,3 +266,9 @@ export const SetRow = React.memo(function SetRow({
     </tr>
   );
 });
+
+/** «serie 1» → «Serie 1»: il nome parlato nasce minuscolo perche' vive in mezzo a una
+ *  frase; in testa a un'etichetta ci vuole la maiuscola. */
+function capitalize(value: string): string {
+  return value.charAt(0).toLocaleUpperCase("it-IT") + value.slice(1);
+}

@@ -26,27 +26,61 @@ import { DEFAULT_SETTINGS, type Settings } from "./schema";
 export type TableCounts = Record<BackupTable, number>;
 
 export async function tableCounts(db: LiftedDB): Promise<TableCounts> {
-  const [exercises, routines, sessions, personalRecords, measurements] =
-    await Promise.all([
-      db.exercises.count(),
-      db.routines.count(),
-      db.sessions.count(),
-      db.personalRecords.count(),
-      db.measurements.count(),
-    ]);
-  return { exercises, routines, sessions, personalRecords, measurements };
+  const [
+    exercises,
+    routines,
+    sessions,
+    personalRecords,
+    measurements,
+    trainerPrograms,
+    trainerDays,
+    trainerDecisions,
+  ] = await Promise.all([
+    db.exercises.count(),
+    db.routines.count(),
+    db.sessions.count(),
+    db.personalRecords.count(),
+    db.measurements.count(),
+    db.trainerPrograms.count(),
+    db.trainerDays.count(),
+    db.trainerDecisions.count(),
+  ]);
+  return {
+    exercises,
+    routines,
+    sessions,
+    personalRecords,
+    measurements,
+    trainerPrograms,
+    trainerDays,
+    trainerDecisions,
+  };
 }
 
 export async function readBackupPayload(db: LiftedDB): Promise<BackupPayload> {
-  const [exercises, routines, sessions, personalRecords, measurements, settings] =
-    await Promise.all([
-      db.exercises.toArray(),
-      db.routines.toArray(),
-      db.sessions.toArray(),
-      db.personalRecords.toArray(),
-      db.measurements.toArray(),
-      db.settings.get("singleton"),
-    ]);
+  const [
+    exercises,
+    routines,
+    sessions,
+    personalRecords,
+    measurements,
+    trainerPrograms,
+    trainerDays,
+    trainerDecisions,
+    trainerProfile,
+    settings,
+  ] = await Promise.all([
+    db.exercises.toArray(),
+    db.routines.toArray(),
+    db.sessions.toArray(),
+    db.personalRecords.toArray(),
+    db.measurements.toArray(),
+    db.trainerPrograms.toArray(),
+    db.trainerDays.toArray(),
+    db.trainerDecisions.toArray(),
+    db.trainerProfile.get("singleton"),
+    db.settings.get("singleton"),
+  ]);
   return {
     exercises,
     routines,
@@ -54,6 +88,10 @@ export async function readBackupPayload(db: LiftedDB): Promise<BackupPayload> {
     sessions: sessions.filter((session) => session.status === "completed"),
     personalRecords,
     measurements,
+    trainerPrograms,
+    trainerDays,
+    trainerDecisions,
+    trainerProfile: trainerProfile ?? null,
     settings: settings ?? null,
   };
 }
@@ -86,7 +124,18 @@ export async function restoreBackup(
 
   await db.transaction(
     "rw",
-    [db.exercises, db.routines, db.sessions, db.personalRecords, db.measurements, db.settings],
+    [
+      db.exercises,
+      db.routines,
+      db.sessions,
+      db.personalRecords,
+      db.measurements,
+      db.trainerPrograms,
+      db.trainerDays,
+      db.trainerDecisions,
+      db.trainerProfile,
+      db.settings,
+    ],
     async () => {
       await Promise.all([
         db.exercises.clear(),
@@ -94,6 +143,10 @@ export async function restoreBackup(
         db.sessions.clear(),
         db.personalRecords.clear(),
         db.measurements.clear(),
+        db.trainerPrograms.clear(),
+        db.trainerDays.clear(),
+        db.trainerDecisions.clear(),
+        db.trainerProfile.clear(),
       ]);
 
       if (data.exercises.length > 0) await db.exercises.bulkAdd(data.exercises);
@@ -103,6 +156,14 @@ export async function restoreBackup(
         await db.personalRecords.bulkAdd(data.personalRecords);
       }
       if (data.measurements.length > 0) await db.measurements.bulkAdd(data.measurements);
+      if (data.trainerPrograms.length > 0) {
+        await db.trainerPrograms.bulkAdd(data.trainerPrograms);
+      }
+      if (data.trainerDays.length > 0) await db.trainerDays.bulkAdd(data.trainerDays);
+      if (data.trainerDecisions.length > 0) {
+        await db.trainerDecisions.bulkAdd(data.trainerDecisions);
+      }
+      if (data.trainerProfile) await db.trainerProfile.put(data.trainerProfile);
 
       const settings: Settings = {
         ...DEFAULT_SETTINGS,
@@ -137,6 +198,10 @@ export async function wipeAllData(db: LiftedDB): Promise<void> {
       db.measurements,
       db.settings,
       db.appMeta,
+      db.trainerPrograms,
+      db.trainerDays,
+      db.trainerDecisions,
+      db.trainerProfile,
     ],
     async () => {
       await Promise.all([
@@ -147,6 +212,10 @@ export async function wipeAllData(db: LiftedDB): Promise<void> {
         db.measurements.clear(),
         db.settings.clear(),
         db.appMeta.clear(),
+        db.trainerPrograms.clear(),
+        db.trainerDays.clear(),
+        db.trainerDecisions.clear(),
+        db.trainerProfile.clear(),
       ]);
     },
   );

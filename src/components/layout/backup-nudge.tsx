@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 import { getDb } from "@/lib/db/db";
+import { formatSessionCount } from "@/lib/format";
 import { useSessionContext } from "@/lib/session-context";
 
 const SOGLIA = 5;
@@ -36,11 +37,11 @@ export function BackupNudge() {
         if (!alive || done.current || count < SOGLIA) return;
         done.current = true;
         sessionStorage.setItem(CHIAVE, "1");
-        toast(`Hai ${count} allenamenti salvati e nessun backup.`, {
+        toast(`Hai ${formatSessionCount(count)} su questo dispositivo e nessun backup.`, {
           duration: 8000,
           action: {
             label: "Esporta ora",
-            onClick: () => router.push("/impostazioni/backup"),
+            onClick: () => router.push("/impostazioni/dati"),
           },
         });
       })

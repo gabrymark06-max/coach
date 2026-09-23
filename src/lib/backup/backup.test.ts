@@ -68,6 +68,10 @@ function payload(): BackupPayload {
     sessions: [SESSION],
     personalRecords: [],
     measurements: [MEASURE],
+    trainerPrograms: [],
+    trainerDays: [],
+    trainerDecisions: [],
+    trainerProfile: null,
     settings: DEFAULT_SETTINGS,
   };
 }
@@ -87,6 +91,9 @@ describe("buildBackup / serializeBackup", () => {
       sessions: 1,
       personalRecords: 0,
       measurements: 1,
+      trainerPrograms: 0,
+      trainerDays: 0,
+      trainerDecisions: 0,
     });
     expect(serializeBackup(backup)).toContain('"app": "lifted"');
   });
@@ -171,7 +178,8 @@ describe("parseBackup", () => {
     delete vecchio.data.sessions[0].exerciseIds;
 
     const riletto = parseBackup(JSON.stringify(vecchio));
-    expect(riletto.data.exercises[0].nameKey).toBe("rematore kroc");
+    // §9.4: la chiave porta anche l'attrezzo, e un file v1 la riceve all'import
+    expect(riletto.data.exercises[0].nameKey).toBe("rematore kroc|dumbbell");
     expect(riletto.data.exercises[0].secondaryMuscles).toEqual([]);
     expect(riletto.data.sessions[0].exerciseIds).toEqual(["lib-panca"]);
   });
@@ -225,5 +233,77 @@ describe("measurementsCsv", () => {
     const righe = csv.trimEnd().split("\r\n");
     expect(righe[1]).toContain(";Peso corporeo;78,4;kg;");
     expect(righe[1]).toContain('"a digiuno; dopo la ""pesata"""');
+  });
+});
+
+/**
+ * Il formato sale a 2 **e nello stesso momento** impara a leggere l'1.
+ *
+ * Il QA aveva verificato la regressione: con `BACKUP_FORMAT_VERSION` a 1, un file
+ * scritto con `formatVersion: 2` veniva respinto come «versione piu' recente». Alzare
+ * il numero senza queste prove avrebbe solo spostato il problema di un anno.
+ */
+describe("compatibilita' del formato — accetta sia 1 sia 2", () => {
+  const base = () =>
+    buildBackup(payload(), {
+      exportedAt: "2026-02-01T09:00:00.000Z",
+      schemaVersion: 2,
+    });
+
+  it("scrive formatVersion 2", () => {
+    expect(base().formatVersion).toBe(2);
+    expect(BACKUP_FORMAT_VERSION).toBe(2);
+  });
+
+  it("un file v2 si legge senza errori", () => {
+    const riletto = parseBackup(serializeBackup(base()));
+    expect(riletto.formatVersion).toBe(2);
+    expect(riletto.data.sessions).toHaveLength(1);
+    expect(riletto.data.trainerPrograms).toEqual([]);
+  });
+
+  it("un file v1 — senza le tabelle del Trainer — si legge e si migra a vuoto", () => {
+    const v1 = JSON.parse(serializeBackup(base()));
+    v1.formatVersion = 1;
+    delete v1.data.trainerPrograms;
+    delete v1.data.trainerDays;
+    delete v1.data.trainerDecisions;
+    delete v1.data.trainerProfile;
+
+    const riletto = parseBackup(JSON.stringify(v1));
+    expect(riletto.formatVersion).toBe(1);
+    expect(riletto.data.sessions).toHaveLength(1);
+    expect(riletto.data.measurements).toHaveLength(1);
+    // il Trainer era vuoto quando il file e' stato scritto, e vuoto resta
+    expect(riletto.data.trainerPrograms).toEqual([]);
+    expect(riletto.data.trainerDays).toEqual([]);
+    expect(riletto.data.trainerDecisions).toEqual([]);
+    expect(riletto.data.trainerProfile).toBeNull();
+  });
+
+  it("un esercizio di libreria della v1 ritrova la sua famiglia, e non diventa un doppione", () => {
+    const v1 = JSON.parse(serializeBackup(base()));
+    v1.formatVersion = 1;
+    v1.data.exercises = [
+      {
+        id: "lib-panca-piana-con-bilanciere",
+        name: "Panca piana con bilanciere",
+        nameKey: "panca piana con bilanciere",
+        muscleGroup: "chest",
+        secondaryMuscles: [],
+        equipment: "barbell",
+        isCustom: false,
+        isBodyweight: false,
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+
+    const riletto = parseBackup(JSON.stringify(v1));
+    const panca = riletto.data.exercises[0];
+    expect(panca.family).toBe("panca-piana");
+    expect(panca.mechanics).toBe("compound");
+    expect(panca.loadMode).toBe("external");
+    expect(panca.popularity).toBe(50);
+    expect(panca.nameKey).toBe("panca piana con bilanciere|barbell");
   });
 });

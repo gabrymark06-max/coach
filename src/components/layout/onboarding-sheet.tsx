@@ -72,7 +72,7 @@ export function OnboardingSheet() {
         </div>
         <SheetFooter>
           <Button variant="ghost" block className="md:w-auto" asChild>
-            <Link href="/impostazioni/backup" onClick={() => void accept()}>
+            <Link href="/impostazioni/dati" onClick={() => void accept()}>
               Come faccio un backup?
             </Link>
           </Button>

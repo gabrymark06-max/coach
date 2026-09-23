@@ -1,10 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { animazioniFinite, chiudiAvvisoIniziale, preparaApp } from "./helpers";
+import { animazioniFinite, chiudiAvvisoIniziale, conSidebar, preparaApp } from "./helpers";
 
 const ROTTE = [
+  "/home",
   "/allenamento",
   "/allenamento/routine/nuova",
+  "/trainer",
   "/esercizi",
   "/esercizi/nuovo",
   "/profilo",
@@ -12,7 +14,9 @@ const ROTTE = [
   "/misure/bodyweight",
   "/statistiche",
   "/impostazioni",
-  "/impostazioni/backup",
+  "/impostazioni/allenamento",
+  "/impostazioni/app",
+  "/impostazioni/dati",
   "/impostazioni/info",
 ];
 
@@ -33,7 +37,7 @@ test("nessuno scroll orizzontale su nessuna rotta", async ({ page }, testInfo) =
 test("i bersagli della sessione rispettano i 48px", async ({ page }) => {
   await preparaDati(page);
   await page.goto("/allenamento");
-  await page.getByRole("button", { name: "Avvia sessione vuota" }).click();
+  await page.getByRole("button", { name: "Avvia allenamento" }).click();
   await expect(page).toHaveURL(/\/sessione/);
 
   const bersagli = [
@@ -54,19 +58,39 @@ test("i bersagli della sessione rispettano i 48px", async ({ page }) => {
   await page.getByRole("button", { name: "Scarta", exact: true }).click();
 });
 
-test("la navigazione diventa un rail laterale da 1024px", async ({ page }, testInfo) => {
-  await page.goto("/allenamento");
+/**
+ * §8.9 — **un solo `<nav aria-label="Navigazione principale">` per documento**, e da
+ * 1024 in su e' la sidebar da 264px. Il rail da 240px della v1 non esiste piu'.
+ */
+test("la navigazione diventa la sidebar da 264px a partire da 1024px", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/home");
   await chiudiAvvisoIniziale(page);
+
   const nav = page.getByRole("navigation", { name: "Navigazione principale" });
+  await expect(nav).toHaveCount(1);
+
   const box = await nav.boundingBox();
   expect(box).not.toBeNull();
 
-  if (testInfo.project.name === "desktop-1440") {
-    expect(box!.width).toBe(240);
+  if (conSidebar(testInfo)) {
+    expect(box!.width).toBe(264);
     expect(box!.height).toBeGreaterThan(400);
   } else {
-    expect(box!.width).toBeGreaterThan(300);
+    // bottom nav: larga quanto lo schermo, alta 56px + safe area
+    expect(box!.width).toBeGreaterThanOrEqual(375);
     expect(box!.height).toBeLessThanOrEqual(80);
+  }
+});
+
+/** Le cinque tab nuove di v2 ci sono, e sono cinque (§4.11). */
+test("le cinque destinazioni sono quelle di v2", async ({ page }) => {
+  await page.goto("/home");
+  await chiudiAvvisoIniziale(page);
+  const nav = page.getByRole("navigation", { name: "Navigazione principale" });
+  for (const voce of ["Home", "Allenamento", "Trainer", "Esercizi", "Profilo"]) {
+    await expect(nav.getByRole("link", { name: voce, exact: true })).toBeVisible();
   }
 });
 
@@ -92,8 +116,8 @@ test("axe: la sessione attiva, con serie compilate", async ({ page }) => {
   await page.getByLabel("Nome della routine").fill("Test a11y");
   await page.getByRole("button", { name: "Aggiungi esercizi" }).click();
   const foglio = page.getByRole("dialog");
-  await foglio.getByRole("searchbox", { name: "Cerca un esercizio" }).fill("squat con bilanciere");
-  await foglio.getByRole("checkbox", { name: /Squat con bilanciere/ }).click();
+  await foglio.getByRole("searchbox", { name: "Cerca un esercizio" }).fill("Squat (Bilanciere)");
+  await foglio.getByRole("checkbox", { name: /^Squat \(Bilanciere\)/ }).click();
   await foglio.getByRole("button", { name: "Aggiungi 1 esercizio" }).click();
   await page.getByRole("button", { name: "Salva routine" }).click();
   await page.getByRole("button", { name: "AVVIA", exact: true }).click();

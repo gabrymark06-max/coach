@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EQUIPMENT_LABEL, type SessionExercise, type SetType } from "@/lib/db/schema";
-import { setDisplayNumber } from "@/lib/db/session-ops";
+import { setDisplayNumber, setSpokenName } from "@/lib/db/session-ops";
 import { cn } from "@/lib/utils";
 import { SetRow } from "./set-row";
 
@@ -194,6 +194,7 @@ export function ExerciseCard({
               key={set.id}
               set={set}
               displayNumber={setDisplayNumber(exercise.sets, i)}
+              spokenName={setSpokenName(exercise.sets, i)}
               exerciseName={exercise.exerciseName}
               showRpe={showRpe}
               stepKg={stepKg}

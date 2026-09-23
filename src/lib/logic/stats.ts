@@ -260,13 +260,57 @@ export interface PersonalTotals {
   sessionsPerWeek: number;
 }
 
-/** Riepilogo personale della tab Profilo: quanto, da quanto, ogni quanto. */
-export function personalTotals(
-  sessions: readonly Session[],
+/**
+ * Le sei somme grezze sullo storico completo, senza niente che dipenda dall'orologio.
+ *
+ * Esiste separata perche' e' quello che il database sa produrre **scorrendo** le
+ * sessioni, senza portarsele tutte in memoria: v. `aggregateCompletedSessions`.
+ */
+export interface SessionAggregate {
+  sessions: number;
+  volumeKg: number;
+  sets: number;
+  durationSec: number;
+  firstAt: ISODate | null;
+  lastAt: ISODate | null;
+}
+
+export const EMPTY_AGGREGATE: SessionAggregate = {
+  sessions: 0,
+  volumeKg: 0,
+  sets: 0,
+  durationSec: 0,
+  firstAt: null,
+  lastAt: null,
+};
+
+/** Somma una sessione dentro un aggregato, in posto. Il verso e' sempre questo. */
+export function accumulateSession(target: SessionAggregate, session: Session): void {
+  if (session.status !== "completed") return;
+  target.sessions += 1;
+  target.volumeKg += session.totalVolumeKg;
+  target.sets += session.totalSets;
+  target.durationSec += session.durationSec;
+  if (target.firstAt === null || session.startedAt < target.firstAt) {
+    target.firstAt = session.startedAt;
+  }
+  if (target.lastAt === null || session.startedAt > target.lastAt) {
+    target.lastAt = session.startedAt;
+  }
+}
+
+/**
+ * Riepilogo personale della tab Profilo: quanto, da quanto, ogni quanto.
+ *
+ * **QA GRAVE 3**: questi numeri si calcolano sull'aggregato di *tutte* le sessioni
+ * completate, mai sulla lista troncata che la schermata mostra sotto. Due schermate
+ * della stessa app non possono dare due numeri diversi sullo stesso dato.
+ */
+export function totalsFromAggregate(
+  aggregate: SessionAggregate,
   now = Date.now(),
 ): PersonalTotals {
-  const completed = sessions.filter((item) => item.status === "completed");
-  if (completed.length === 0) {
+  if (aggregate.sessions === 0 || aggregate.firstAt === null) {
     return {
       sessions: 0,
       volumeKg: 0,
@@ -279,32 +323,28 @@ export function personalTotals(
     };
   }
 
-  let volumeKg = 0;
-  let sets = 0;
-  let durationSec = 0;
-  let firstAt = completed[0].startedAt;
-  let lastAt = completed[0].startedAt;
-
-  for (const session of completed) {
-    volumeKg += session.totalVolumeKg;
-    sets += session.totalSets;
-    durationSec += session.durationSec;
-    if (session.startedAt < firstAt) firstAt = session.startedAt;
-    if (session.startedAt > lastAt) lastAt = session.startedAt;
-  }
-
-  const from = mondayOf(atMidnight(firstAt)).getTime();
+  const from = mondayOf(atMidnight(aggregate.firstAt)).getTime();
   const to = mondayOf(atMidnight(new Date(now).toISOString())).getTime();
   const weeksTracked = Math.max(1, Math.round((to - from) / (7 * DAY_MS)) + 1);
 
   return {
-    sessions: completed.length,
-    volumeKg: Math.round(volumeKg * 100) / 100,
-    sets,
-    durationSec,
-    firstAt,
-    lastAt,
+    sessions: aggregate.sessions,
+    volumeKg: Math.round(aggregate.volumeKg * 100) / 100,
+    sets: aggregate.sets,
+    durationSec: aggregate.durationSec,
+    firstAt: aggregate.firstAt,
+    lastAt: aggregate.lastAt,
     weeksTracked,
-    sessionsPerWeek: completed.length / weeksTracked,
+    sessionsPerWeek: aggregate.sessions / weeksTracked,
   };
+}
+
+/** Stessa cosa a partire da un array gia' in memoria (test, import, CSV). */
+export function personalTotals(
+  sessions: readonly Session[],
+  now = Date.now(),
+): PersonalTotals {
+  const aggregate: SessionAggregate = { ...EMPTY_AGGREGATE };
+  for (const session of sessions) accumulateSession(aggregate, session);
+  return totalsFromAggregate(aggregate, now);
 }

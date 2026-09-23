@@ -1,7 +1,59 @@
 # Lifted — Design System
 
-Versione 1.0 · 2026-09-22 · Autore: `ui-ux-designer`
-Fonte vincolante: `docs/spec.md` (brief utente) + `CLAUDE.md` (standard studio).
+**Versione 2.0 · 2026-09-23 · Autore: `ui-ux-designer`**
+Versione 1.0 · 2026-09-22 — resta valida ovunque la v2 non la contraddica.
+
+Fonti vincolanti: `docs/spec.md` (brief originale) · **`docs/spec-v2.md` (revisione dell'utente,
+prevale in caso di conflitto)** · `docs/qa-report.md` (due difetti chiudono qui) ·
+`CLAUDE.md` (standard studio) · gli screenshot `docs/rif-hevy-*.png`.
+
+---
+
+## V2 — changelog: che cosa cambia e che cosa no (leggi questa tabella per prima)
+
+La v2 **cambia il guscio, non il sistema**. Token, tipografia, contrasti, la riga della serie,
+il timer, i PR, le misure, il backup: identici. Quello che cambia è *dove stanno le cose* da
+1024px in su, più due schermate nuove e un difetto di grafico da chiudere.
+
+| Area | v1 | **v2** | Dove |
+|---|---|---|---|
+| Palette e contrasti | tema scuro unico, misurato | **invariati** (decisione esplicita dell'utente) | §1.1–1.8 |
+| Tipografia Archivo × Public Sans | — | **invariata** | §3 |
+| Navigazione desktop | rail laterale 240px, stesse 5 tab | **sidebar 264px con ricerca, gruppi, blocco stato locale** — *sostituisce il rail* | §4.19 |
+| Guscio ≥1024 | una colonna, max 1120px | **due colonne** (sidebar + centro) | §7.4 |
+| Guscio ≥1280 | — | **tre colonne** (sidebar + centro a card + colonna destra) | §4.20, §7.5 |
+| Tab mobile | Allenamento · Profilo · Esercizi · Misure · Statistiche | **Home · Allenamento · Trainer · Esercizi · Profilo** (Misure e Statistiche passano sotto Profilo) | §4.11 |
+| Home | non esisteva, `/` → `/allenamento` | **`/home`: feed di allenamenti + avvio in cima** | §4.21, §6.7 |
+| Trainer | non esisteva | **sezione nuova**: questionario, programma, giorno, registro delle decisioni | §4.23–§4.25, §6.8 |
+| Libreria esercizi | lista a pagina piena, 81 voci | **due pannelli a ≥1280** (dettaglio al centro, elenco a destra), **~250-300 voci** | §4.26, §9.4 |
+| Profilo | riepilogo + storico | **intestazione a numeri, statistiche a tab, calendario mensile, feed personale** | §4.22, §4.27 |
+| Impostazioni | pagina singola + 2 sottopagine | **indice + pannello** a due colonne, una rotta per sezione | §4.28 |
+| Grafici | nessuna regola di dominio → linee piatte (QA GRAVE 2) | **regola dei domini degli assi** | §4.10-bis |
+| `<main>`/`<h1>` | solo dentro le tab (QA GRAVE 5) | **obbligatori su ogni rotta**, anche fuori dal guscio | §8.9 |
+| Social | non c'era | **non c'è e non ci sarà**: niente follower, like, commenti, atleti suggeriti | tabella qui sotto |
+| Video di esecuzione | — | **fuori dalla v2**: il campo esiste nello schema, nessuna schermata lo promette | §9.4 |
+
+**Componenti v1 che la v2 non tocca** (non ridisegnarli, non "aggiornarli mentre ci sei):
+`SetRow` §4.1 · `ExerciseCard` §4.2 · `SessionHeader` §4.3 · `RestTimerPill` §4.4 ·
+`PRBadge` §4.5 · `RoutineCard` §4.7 · `MeasureForm` §4.9 · `Dialog`/`Sheet` §4.16 ·
+`Toast` §4.17 · `NumberField` §4.18 · `PlateVisual` §6.4 · tutta la microcopy §5 ·
+tutti i flussi di sessione §6.2–§6.6 · tutta la §11.
+
+### V2 — che cosa si prende dal riferimento e che cosa si scarta
+
+Gli screenshot sono di hevy.com, che è un prodotto **sociale**. Lifted no.
+Ogni elemento sociale del riferimento ha una traduzione locale dichiarata, non un buco:
+
+| Nel riferimento | In Lifted |
+|---|---|
+| `Cerca utenti` nella sidebar | **ricerca globale su esercizi e routine** (§4.19.3) |
+| Blocco account in fondo alla sidebar | **blocco «stato locale»**: dove stanno i dati + età dell'ultimo backup (§4.19.4) |
+| Avatar + username + Follower/Seguiti | **intestazione a numeri**: allenamenti, volume, serie, tempo (§4.22) |
+| Like · commenti · condividi sotto la card | **niente**. La card finisce con l'elenco esercizi. |
+| `Atleti suggeriti` nella colonna destra | **azioni rapide + stato del backup** (§4.20) |
+| Miniature fotografiche dell'esercizio | **quadratino 40×40 con l'iniziale del gruppo muscolare** (§4.8, già in v1) |
+| Emoji 🏅 sul conteggio record | **icona `Trophy` + numero + la parola** (§4.21) |
+| `HEVY PRO · Sblocca` | **niente**: non c'è un piano a pagamento da vendere a sé stessi |
 
 ---
 
@@ -221,6 +273,22 @@ Scala unica, base 4, densa (è un'app di dati, non una landing).
 - **Respira** — riepilogo post-workout e gli empty state: `--space-10` / `--space-11`.
 - **Respira** — schede misure e statistiche: card con `--space-6`, gap `--space-5`.
 
+**v2 — la densità del guscio** (dove stringe e dove respira, da 1024 in su):
+- **Stringe** — la **sidebar**: voci da 48px con gap verticale `--space-1` (2px), padding
+  orizzontale `--space-4`, sotto-voci da 40px. Sei destinazioni devono stare sopra la piega
+  insieme alla ricerca e al blocco di stato.
+- **Stringe** — il **pannello elenco** della libreria: righe 48px (`--row-list-desk`),
+  separatore 1px, **nessun gap**. 13 voci in un pannello alto 640px.
+- **Stringe** — l'**indice delle impostazioni**: voci da 44px, gruppi separati da `--space-5`.
+- **Stringe** — la **griglia del calendario**: gap `--cal-gap` (4px), celle 40px.
+- **Respira** — la **colonna centrale a feed**: gap `--space-5` (16px) fra le card, padding
+  interno `--space-6` (20px), `--space-9` (40px) sopra l'`h1` di pagina.
+- **Respira** — la **card «Oggi»** del Trainer: padding `--space-6`, che la stacca dalle righe
+  delle settimane sotto.
+- La **colonna destra ha un padding interno minore del centro** (`--space-5` contro
+  `--space-6`): è di supporto, e la densità lo dice prima del contenuto. Padding identico
+  ovunque farebbe sembrare le due colonne intercambiabili, e non lo sono.
+
 ### 1.10 Raggi
 
 Deliberatamente **non uniformi**: la forma classifica.
@@ -279,15 +347,22 @@ cambio di stato**. Nessuna animazione decorativa esiste in questo sistema.
 Uscita = `--dur-1` (150ms), cioè ~58% dell'ingresso più lento. Ogni animazione è
 **interrompibile**: un tocco durante la transizione la cancella e applica lo stato finale.
 
-### 1.14 Breakpoint
+### 1.14 Breakpoint — **aggiornata in v2**
 
 | Token | Valore | Cosa cambia |
 |---|---|---|
 | base | `375px` | mobile-first, nessuna media query |
 | `--bp-sm` | `480px` | phablet: la riga serie guadagna la colonna RPE anche se attiva |
-| `--bp-md` | `768px` | tablet: griglie a 2 colonne, contenuto centrato max 680px |
-| `--bp-lg` | `1024px` | la bottom nav diventa rail laterale |
-| `--bp-xl` | `1440px` | sessione a 2 colonne, contenuto max 1120px |
+| `--bp-md` | `768px` | tablet: griglie a 2 colonne, contenuto centrato max 680px. **La bottom nav resta.** |
+| `--bp-lg` | `1024px` | **v2: la bottom nav diventa la `Sidebar` di 264px** (in v1 era il rail di 240px). Guscio a **due** colonne. |
+| `--bp-3col` | **`1280px`** | **v2, nuovo**: compare la **colonna destra** di 320px. Guscio a **tre** colonne. |
+| `--bp-xl` | `1440px` | sessione a 2 colonne; l'area contenuto smette di crescere (max 1120px) e si centra |
+
+**Perché 1280 e non 1024 per la terza colonna.** A 1024 il conto è: 264 di sidebar + 24×2 di
+gutter + 320 di colonna destra = 632px di cromo, e alla colonna centrale ne restano 392 —
+meno di quanti ne ha a 768px senza sidebar. Una terza colonna che rimpicciolisce il contenuto
+non è un guadagno, è un vezzo. A 1280 il centro misura 632px, a 1440 misura 760px: sopra
+soglia in entrambi i casi.
 
 ### 1.15 Dimensioni dei controlli
 
@@ -303,6 +378,28 @@ Uscita = `--dur-1` (150ms), cioè ~58% dell'ingresso più lento. Ogni animazione
 | `--icon-md` | `20px` | icone inline nei bottoni |
 | `--icon-lg` | `24px` | icone di navigazione e di azione principale |
 | `--stroke-icon` | `1.75` | `strokeWidth` uniforme su tutte le lucide-react |
+
+### 1.16 Dimensioni del guscio — **nuova in v2**
+
+Nessuno di questi numeri vive dentro un componente: sono token, come tutto il resto.
+
+| Token | Valore | Ruolo |
+|---|---|---|
+| `--sidebar-w` | **`264px`** | larghezza della sidebar da `--bp-lg`. **Sostituisce il rail da 240px di v1** (`lg:pl-60` / `lg:w-60` in `app-shell.tsx` e `bottom-nav.tsx` vanno rimossi) |
+| `--sidebar-item-h` | `48px` | altezza di una voce di navigazione (≥ `--tap-min`, anche a 1024 su tablet) |
+| `--sidebar-search-h` | `44px` | campo di ricerca globale in cima alla sidebar |
+| `--sidebar-pad-x` | `var(--space-4)` (12px) | imbottitura orizzontale della sidebar |
+| `--sidebar-foot-h` | `64px` | blocco «stato locale» in fondo, e `SessionBar` quando è presente |
+| `--rail-right-w` | **`320px`** | colonna destra da `--bp-3col` |
+| `--shell-max` | `1120px` | larghezza massima di (centro + colonna destra), centrata |
+| `--shell-gutter` | `var(--space-7)` (24px) | gutter dell'area contenuto fra 1024 e 1279 |
+| `--shell-gutter-lg` | `var(--space-8)` (32px) | gutter e gap fra colonne da 1280 |
+| `--content-max` | `760px` | larghezza massima della colonna centrale a **due** colonne |
+| `--settings-index-w` | `260px` | indice delle impostazioni dentro la colonna centrale |
+| `--pane-list-w` | `var(--rail-right-w)` | pannello elenco della libreria a due pannelli |
+| `--row-list-desk` | `48px` | riga di elenco dentro un pannello laterale (mouse + tastiera; resta ≥ `--tap-min`) |
+| `--cal-cell` | `40px` | diametro visivo della cella del calendario (area tattile 44×44) |
+| `--cal-gap` | `var(--space-2)` (4px) | gap della griglia del calendario |
 
 ---
 
@@ -398,8 +495,28 @@ Uscita = `--dur-1` (150ms), cioè ~58% dell'ingresso più lento. Ogni animazione
   --row-set: 52px; --row-list: 56px;
   --nav-h: 56px;   --session-bar-h: 48px;
   --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
+
+  /* --- v2: guscio a due/tre colonne (§1.16) --- */
+  --sidebar-w: 264px;
+  --sidebar-item-h: 48px;
+  --sidebar-search-h: 44px;
+  --sidebar-pad-x: var(--space-4);
+  --sidebar-foot-h: 64px;
+  --rail-right-w: 320px;
+  --shell-max: 1120px;
+  --shell-gutter: var(--space-7);
+  --shell-gutter-lg: var(--space-8);
+  --content-max: 760px;
+  --settings-index-w: 260px;
+  --pane-list-w: var(--rail-right-w);
+  --row-list-desk: 48px;
+  --cal-cell: 40px;
+  --cal-gap: var(--space-2);
 }
 ```
+
+**v2 — da aggiungere a `@theme inline` (§2.2):** `--breakpoint-3col: 1280px`.
+Nessun **colore** nuovo: la v2 non introduce un solo hex che non fosse già in v1.
 
 > **Nota d'implementazione.** Lo stack è React 19 + Next App Router → Tailwind v4, dove
 > shadcn accetta valori colore diretti. Se per qualunque ragione il progetto finisse su
@@ -736,6 +853,12 @@ Card grande in cima alla tab Allenamento: `--radius-lg`, fondo `--card`, bordo 1
 | error | "Impossibile leggere i dati locali." + `Riprova` |
 | empty | non applicabile (è sempre presente) |
 
+> **v2 — una taglia in più.** `QuickStart` guadagna una prop `size`:
+> `full` (questa, in cima a `/allenamento`) e **`compact`** (80px, senza titolo, primario
+> `Avvia allenamento` + secondario **col nome dell'ultima routine usata** — `Riprendi Push A ›`
+> — in riga), che vive in cima a `/home` (§6.7). È lo **stesso componente**, non due che si
+> somigliano. Tutti gli stati qui sopra valgono per entrambe le taglie.
+
 ### 4.7 `RoutineCard` — card routine
 
 Riga/card `--radius-md`, fondo `--card`, padding `--space-5`, bordo 1px `--border`,
@@ -793,6 +916,11 @@ bordo 1px `--border-strong`, testo `sm` `--text-secondary`.
 Liste oltre 50 voci: **virtualizzate** (`@tanstack/react-virtual`). La libreria precaricata
 supera abbondantemente questa soglia.
 
+> **v2.** Questa specifica resta la libreria **sotto 1280px**. Da 1280 diventa il pannello
+> destro della libreria a due pannelli (§4.26): righe 48px invece di 56, due `<select>`
+> invece dei chip, raggruppamento per famiglia di movimento. Con ~300 voci (§9.4) la
+> virtualizzazione smette di essere una raccomandazione ed è un requisito.
+
 ### 4.9 `MeasureForm` — form misure
 
 Layout a coppie: label a sinistra in `body-strong`, campo a destra, riga 56px.
@@ -841,18 +969,97 @@ Contenitore: card `--card`, `--radius-md`, padding `--space-5`, altezza 240px a 
 | error | "Impossibile calcolare questo grafico." + `Riprova` |
 | reduced motion | `isAnimationActive={false}` su tutte le serie |
 
-### 4.11 `BottomNav` — navigazione a 5 tab
+### 4.10-bis Dominio degli assi — **nuova in v2, chiude QA GRAVE 2**
+
+Il difetto: `TrendChart` non dichiarava `domain`, Recharts applicava `[0, 'auto']`, e due
+misurazioni di peso corporeo a 82,4 e 81,2 kg diventavano una riga orizzontale su un asse
+0-100. La funzionalità esisteva e non serviva a niente. La regola che segue non è un
+suggerimento: è il contratto del componente `Chart`.
+
+#### La domanda che decide
+
+**Lo zero è un valore possibile e significativo per questa grandezza?**
+
+| Risposta | Famiglia | Dominio Y | Esempi in Lifted |
+|---|---|---|---|
+| **Sì** — zero vuol dire "niente" | grandezze **cumulative o di conteggio**: si sommano, e la loro altezza *è* l'informazione | **`[0, dataMax + pad]`**, sempre. Nessuna eccezione. | volume settimanale/mensile, serie totali, minuti di allenamento, numero di allenamenti, distribuzione per gruppo muscolare |
+| **No** — zero è impossibile o assurdo | grandezze **di livello**: quello che conta è la *variazione*, non la distanza dall'origine | **`[dataMin − pad, dataMax + pad]`** | peso corporeo, % massa grassa, circonferenze, **1RM stimato**, carico massimo per esercizio |
+
+Le **barre** (`VolumeBars`) partono **sempre** da zero, anche se misurassero una grandezza di
+livello: l'area della barra è il canale percettivo, e una barra tagliata mente. Se una
+grandezza di livello va mostrata nel tempo, si usa una **linea**, non una barra. È il motivo
+per cui `VolumeBars` resta com'è e solo `TrendChart` cambia.
+
+#### Il margine, con i numeri
+
+```ts
+escursione = dataMax − dataMin
+pad        = Math.max(escursione * 0.08, unitaMinima)
+tick       = primo valore di [0.5, 1, 2.5, 5, 10, 25, 50, 100] che produce 4–6 tick
+yMin       = Math.floor((dataMin − pad) / tick) * tick
+yMax       = Math.ceil ((dataMax + pad) / tick) * tick
+```
+
+| Metrica | `unitaMinima` |
+|---|---|
+| peso corporeo, 1RM stimato, carico | `0.5` kg |
+| % massa grassa | `0.5` % |
+| circonferenze | `0.5` cm |
+
+**Caso degenere — escursione zero** (tutti i punti uguali, o un punto solo): `pad` diventerebbe
+`unitaMinima` e l'asse si stringerebbe a 1 kg, trasformando il rumore in un terremoto.
+Regola: se `escursione === 0`, il dominio è `[v − unitaMinima*4, v + unitaMinima*4]`, la
+linea si disegna al centro esatto, e **sotto il grafico compare la frase** «Nessuna variazione
+nel periodo.» in `sm` `--text-secondary`. Mai un grafico che suggerisce un movimento che non c'è.
+
+#### La dichiarazione obbligatoria
+
+Quando l'asse **non parte da zero**, il grafico porta nel piede, in `sm` `--text-muted`
+(5.44:1 su `--card`), una riga che dichiara la scala:
+
+> `Scala: 78,5 – 83,0 kg`
+
+Non è un'avvertenza decorata, è il dato: dice al lettore quanto vale l'escursione che sta
+guardando, e serve anche da riepilogo accessibile. Sui grafici che partono da zero questa
+riga **non** compare (sarebbe rumore: lo zero è già visibile sull'asse).
+
+| Stato | Specifica |
+|---|---|
+| dominio dal minimo | riga `Scala: min – max` nel piede + primo tick con l'unità |
+| dominio da zero | nessuna riga; il tick `0` è sempre visibile e mai tagliato |
+| escursione zero | dominio simmetrico, linea al centro, frase «Nessuna variazione nel periodo.» |
+| 1 solo punto | §4.10, empty «Serve un secondo dato per tracciare una linea.» — la regola del dominio non si applica |
+| serie multiple con unità diverse | **vietato su un asse solo**. Due assi Y, ciascuno con la sua regola, o due grafici. |
+
+`aria`: la `<table>` alternativa che l'app già genera per ogni grafico resta la fonte di
+verità accessibile e **non** cambia con il dominio — contiene i valori, non i pixel.
+
+### 4.11 `BottomNav` — navigazione a 5 tab · **tab riassegnate in v2**
 
 `fixed`, altezza `--nav-h` (56px) `+ env(safe-area-inset-bottom)`, fondo `--background`,
 bordo superiore 1px `--border`, `--z-nav`. Ogni tab occupa 20% (75px a 375 → ≥48 ✓).
+**Vive solo sotto `--bp-lg` (1024px).** Da 1024 in su non esiste: al suo posto c'è la
+`Sidebar` (§4.19), che **sostituisce il rail laterale da 240px della v1** — quel rail si
+cancella, non si affianca.
 
-| # | Rotta | Etichetta | Icona lucide (inattiva → attiva) |
-|---|---|---|---|
-| 1 | `/allenamento` | Allenamento | `Dumbbell` → `Dumbbell` riempita |
-| 2 | `/profilo` | Profilo | `User` → `User` riempita |
-| 3 | `/esercizi` | Esercizi | `ListChecks` → riempita |
-| 4 | `/misure` | Misure | `Ruler` → riempita |
-| 5 | `/statistiche` | Statistiche | `TrendingUp` → riempita |
+| # | Rotta | Etichetta | Icona lucide (inattiva → attiva) | v1 → v2 |
+|---|---|---|---|---|
+| 1 | **`/home`** | Home | `House` → riempita | **nuova** |
+| 2 | `/allenamento` | Allenamento | `Dumbbell` → riempita | resta (era la 1ª) |
+| 3 | **`/trainer`** | Trainer | `ClipboardList` → riempita | **nuova** |
+| 4 | `/esercizi` | Esercizi | `ListChecks` → riempita | resta |
+| 5 | `/profilo` | Profilo | `User` → riempita | resta |
+
+**Misure e Statistiche escono dalla barra.** Non spariscono: diventano due dei tre pannelli
+di `/profilo` (`Riepilogo · Statistiche · Misure`, §4.22), restano rotte reali
+(`/misure`, `/misure/[metrica]`, `/statistiche`), restano deep-linkabili, e nella sidebar
+restano come voci annidate sotto Profilo.
+
+*Il costo, dichiarato:* su telefono Misure passa da 1 tocco a 2. *Il motivo:* il tetto di
+**cinque** voci in una bottom nav non è negoziabile (a sei, la colonna a 375px scende a 62px
+e l'etichetta non ci sta più), e le due schermate nuove si aprono molte più volte a settimana
+di quante se ne apra la tab Misure. Statistiche e Misure sono schermate da *consultare*, e il
+posto delle schermate da consultare è il profilo: è anche dove il riferimento le mette.
 
 Icona 24px sopra, etichetta `label` (12px, 600, 0.06em) sotto, gap `--space-1`.
 
@@ -897,6 +1104,12 @@ fondo `--card-elevated`, bordo superiore 1px `--border-strong`, `--elev-2`,
 | reduced motion | punto fisso, nessuna pulsazione |
 
 Il `<main>` aggiunge `--session-bar-h` al proprio `padding-bottom` quando la barra è presente.
+
+> **v2.** Tutto questo vale **sotto 1024px**. Da `--bp-lg` la `SessionBar` si sposta
+> **dentro la sidebar**, sopra il blocco stato locale: larghezza piena della colonna,
+> altezza `--sidebar-foot-h` (64px), due righe, `--radius-md` (§4.19.5). Non resta anche
+> fissa in fondo alla finestra: senza una bottom nav su cui appoggiarsi, coprirebbe il
+> contenuto senza guadagnarci niente. Il `<main>` a ≥1024 non ha più il `padding-bottom`.
 
 ### 4.13 `Button`
 
@@ -950,6 +1163,13 @@ larghezza massima 320px.
 | Statistiche — dati insufficienti | `TrendingUp` | "Servono più dati" | "Completa almeno due sessioni per vedere le statistiche." | `Inizia ad allenarti` |
 | Esercizio — nessuno storico | `LineChart` | "Mai allenato" | "Quando userai questo esercizio, qui vedrai il tuo 1RM stimato." | — |
 | Backup — nessun export | `Download` | "Nessun backup" | "I dati sono solo su questo dispositivo. Esportali ora." | `Esporta tutto` |
+| **v2** — Home, feed vuoto | `History` | "Nessun allenamento registrato" | "Il tuo primo allenamento comparirà qui. Poi ci resta." | `Avvia allenamento` + ghost `Scegli una routine` |
+| **v2** — Trainer, nessun programma | `ClipboardList` | "Nessun programma" | "Rispondi a sei domande e ti preparo un programma di più settimane che si aggiorna da solo." | `Inizia il questionario` + ghost `Come funziona` |
+| **v2** — Trainer, registro vuoto | `ListChecks` | "Ancora nessuna decisione" | "Il registro si riempie dopo il tuo primo allenamento del programma: ogni cambio di carico finisce qui, con il motivo." | `Vai al programma` |
+| **v2** — Trainer, filtro senza risultati | `SearchX` | "Nessuna riduzione" | "Nessuna riduzione di carico finora." | `Azzera filtri` |
+| **v2** — Libreria, nessuna selezione | `Dumbbell` | "Scegli un esercizio" | "Seleziona una voce dall'elenco per vedere storico, 1RM stimato e record." | — |
+| **v2** — Calendario, mese vuoto | — (la griglia resta) | — | "Nessun allenamento a settembre." | link `Vai a agosto (8 allenamenti)` |
+| **v2** — Ricerca globale, nessun risultato | `SearchX` | — | "Nessun risultato per «panka»." | `Crea l'esercizio «panka»` |
 
 ### 4.16 `Dialog` e `Sheet` (Radix)
 
@@ -1043,6 +1263,708 @@ Decisioni vincolanti:
 
 ---
 
+## 4-bis. Componenti nuovi della v2
+
+Tutto quello che segue non esisteva in v1. Vale la stessa regola: **specificato per stati,
+non per aspetto**; se manca lo stato vuoto, quello di caricamento o quello d'errore, il
+componente non è finito.
+
+### 4.19 `Sidebar` — la navigazione da `--bp-lg` in su
+
+Sostituisce il rail di 240px. È **fissa**, non collassabile, non a scomparsa: un guscio che
+si può nascondere costa un pulsante, uno stato da ricordare e una decisione a ogni apertura,
+e su un'app con sei destinazioni non compra niente.
+
+```
+┌── 264px ─────────────────┐
+│  Lifted                  │  wordmark, h2, link a /home
+│  ┌────────────────────┐  │
+│  │ ⌕ Cerca esercizi…  │  │  44px, ricerca globale (§4.19.3)
+│  └────────────────────┘  │
+│  ▮ ⌂  Home              │  48px, voce attiva: corsia 3px + fondo + icona piena
+│    ⬚  Allenamento       │
+│    ▤  Trainer           │
+│    ≡  Esercizi          │
+│    ○  Profilo           │
+│       · Riepilogo       │  sotto-voci: solo se Profilo è la sezione attiva
+│       · Statistiche     │
+│       · Misure          │
+│                          │
+│  ·····················   │  separatore 1px --border
+│    ⚙  Impostazioni      │
+│  ┌────────────────────┐  │
+│  │ ● Sessione · 32:14 │  │  SessionBar, solo se c'è una sessione attiva
+│  └────────────────────┘  │
+│  ┌────────────────────┐  │
+│  │▮ Dati su questo    │  │  blocco stato locale, 64px (§4.19.4)
+│  │  dispositivo       │  │
+│  │  Backup: 3 giorni fa│  │
+│  └────────────────────┘  │
+└──────────────────────────┘
+```
+
+Contenitore: `<nav aria-label="Navigazione principale">`, `position: fixed`, `inset-block: 0`,
+`left: 0`, `width: var(--sidebar-w)`, fondo `--card`, bordo destro 1px `--border`,
+`padding: var(--space-6) var(--sidebar-pad-x)`, `z-index: var(--z-nav)`,
+`overflow-y: auto`, `scrollbar-gutter: stable`, `display: flex; flex-direction: column`.
+Il blocco inferiore (separatore → Impostazioni → SessionBar → stato locale) è spinto in basso
+da un `margin-top: auto`, **non** da una posizione assoluta: se la finestra è bassa, la lista
+scorre e il piede scende con lei invece di coprirla.
+
+#### 4.19.1 Voce di navigazione — stati
+
+Altezza `--sidebar-item-h` (48px), `--radius-md`, padding `0 var(--space-4)`, icona 20px,
+etichetta `body` (16/24), gap `--space-4`, gap verticale fra voci `--space-1` (2px).
+
+| Stato | Specifica | Contrasto misurato |
+|---|---|---|
+| **default** | icona e testo `--text-secondary`, peso 400, fondo trasparente | 8.31:1 su `--card` |
+| **hover** (`@media (hover:hover)`) | fondo `--surface-hover`, testo `--text-primary` | **13.02:1** su `#262A34` |
+| **focus-visible** | `outline: 2px solid var(--ring); outline-offset: -2px` — l'anello resta **dentro** i bounds, così non viene tagliato dal bordo della sidebar | `--ring` su `#262A34` = **6.59:1** (≥3 ✓) |
+| **active / press** | `transform: scale(0.99)`, `--dur-1`, `--ease-tap` | — |
+| **attiva** | **cinque** segnali insieme: (1) **corsia 3px `--blue-brand`** sul bordo sinistro interno, `--radius-xs` — *è l'elemento firma del sistema, lo stesso di §0*; (2) fondo `--surface-hover`; (3) icona **riempita** `--accent-blue`; (4) etichetta `--accent-blue` peso 600; (5) `aria-current="page"` | `--accent-blue` su `#262A34` = **4.79:1** ✓ |
+| **disabled** | non esiste: una destinazione è sempre raggiungibile | — |
+| **loading** | non esiste: la sidebar è statica, non dipende da Dexie | — |
+| **error** | non esiste | — |
+| **con badge** | solo due voci possono portarne uno: Trainer (`Oggi` quando c'è un allenamento previsto e non ancora fatto) e Impostazioni (punto `--warning` se il backup manca da >14 giorni). Il badge è **testo o punto + `aria-label` esteso**, mai un numero senza nome: `aria-label="Trainer, allenamento previsto oggi"` |
+
+#### 4.19.2 Sotto-voci
+
+Solo sotto **Profilo**, e solo quando Profilo è la sezione attiva (`progressive-disclosure`).
+Altezza 40px, rientro `--space-8` (32px) a sinistra, nessuna icona, etichetta `sm`
+`--text-secondary`, attiva → `--accent-blue` peso 600 + `aria-current="page"`.
+Marcate come `<ul>` annidato dentro il `<li>` del padre, così lo screen reader legge la
+gerarchia invece di sette voci piatte. **Il target scende a 40px**: è l'unica eccezione ai 44
+in tutto il sistema, ammessa perché (a) esiste solo da 1024px in su, dove l'input è un mouse,
+(b) WCAG 2.5.8 chiede 24px sul web, (c) ogni sotto-voce è raggiungibile anche dal pannello a
+tab di `/profilo`, che è a 48px. Se questa eccezione dà fastidio in revisione, si alza a 44 e
+si perde un rientro: nessun altro effetto.
+
+#### 4.19.3 `GlobalSearch` — ricerca in cima alla sidebar
+
+Il riferimento ha «Cerca utenti». Qui non ci sono utenti: il campo cerca **esercizi e routine**.
+
+Input 44px, fondo `--input`, bordo 1px `--border-strong` (3.67:1), `--radius-sm`, icona
+`Search` 16px `--text-muted` a sinistra, placeholder `Cerca esercizi o routine…` (§11.8: le
+istruzioni finiscono con `…`). `role="combobox"`, `aria-expanded`, `aria-controls`,
+`aria-activedescendant`; il popover è `--card-elevated`, bordo `--border-strong`,
+`--radius-md`, `--elev-2`, larghezza = sidebar + `--space-8`, max 8 risultati.
+
+| Stato | Specifica |
+|---|---|
+| default | placeholder, nessun popover |
+| focus | anello `--ring` + bordo `--accent-blue`; il popover si apre con «Recenti» (ultime 5 aperture) |
+| digitazione | filtro locale con **debounce 120ms**; risultati raggruppati con intestazione `label`: `ESERCIZI` / `ROUTINE`. `↑`/`↓` scorrono, `Invio` apre, `Esc` chiude e restituisce il focus al campo |
+| **loading** | non esiste: 300 voci in memoria si filtrano in meno di 16ms. Coerente con §4.14 («sotto 1s nessun indicatore») |
+| **empty — nessun risultato** | `Nessun risultato per «panka».` + azione `Crea l'esercizio «panka»` |
+| **empty — campo vuoto al focus** | «Recenti»; se non ce ne sono, «Scrivi il nome di un esercizio o di una routine.» |
+| error | `Impossibile leggere la libreria.` + `Riprova` |
+| annuncio | `aria-live="polite"` con debounce 500ms: «7 risultati.» Mai un annuncio per tasto. |
+
+**Sotto 1024px la ricerca globale non esiste.** Non si aggiunge una lente alla bottom nav:
+la ricerca della libreria è già in cima a `/esercizi` e duplicarla creerebbe due campi che
+cercano cose diverse con la stessa icona.
+
+#### 4.19.4 `LocalStateBlock` — il piede della sidebar
+
+Al posto del blocco account del riferimento. 64px (`--sidebar-foot-h`), fondo
+`--card-elevated`, `--radius-md`, bordo 1px `--border`, padding `--space-4`,
+**corsia 3px** a sinistra (l'elemento firma).
+
+```
+▮ Dati su questo dispositivo                 [ ⤓ 44 ]
+  Ultimo backup: 3 giorni fa
+```
+- riga 1: `sm` `--text-primary` (14.44:1);
+- riga 2: `sm` `--text-muted` (4.87:1 su elevato) quando il backup è recente;
+- pulsante icona `Download` 44×44, `aria-label="Esporta un backup adesso"`.
+
+| Stato | Corsia | Riga 2 | Canali |
+|---|---|---|---|
+| backup ≤ 7 giorni | `--success` | «Ultimo backup: 3 giorni fa» `--text-muted` | colore + testo |
+| backup 8–14 giorni | `--warning` | «Ultimo backup: 11 giorni fa» `--pr` (8.70:1 su elevato) | colore + testo |
+| backup > 14 giorni **o mai** | `--warning` | icona `AlertTriangle` 16px `--pr` + «**Nessun backup.** I dati sono solo qui.» | colore + **icona** + testo |
+| esportazione in corso | `--accent-blue` | pulsante in stato loading (§4.13) + «Esporto…» | — |
+| error | `--danger` | «Esportazione non riuscita.» + `Riprova` | colore + testo |
+
+È la traduzione onesta del blocco «chi sei» del riferimento: qui non conta chi sei, conta
+**dove stanno i tuoi dati** — che in un'app local-first è l'unica informazione di stato che
+valga un posto fisso sullo schermo.
+
+#### 4.19.5 `SessionBar` nella sidebar
+
+Quando c'è una sessione attiva, la `SessionBar` di §4.12 vive **dentro la sidebar**, sopra il
+blocco stato locale: larghezza piena della colonna, altezza `--sidebar-foot-h` (64px),
+`--radius-md`, due righe (`Sessione in corso` / `32:14 · Panca piana`). Fuori dalla sidebar
+non compare: a ≥1024 non c'è una bottom nav sopra cui appoggiarla, e una barra fissa in fondo
+alla finestra coprirebbe il contenuto senza motivo. Sotto 1024 resta esattamente come in v1.
+
+---
+
+### 4.20 `RightRail` — la colonna destra (da `--bp-3col`)
+
+`<aside aria-label="Riepilogo e azioni rapide">`, larghezza `--rail-right-w` (320px),
+`position: sticky; top: var(--space-8)`, altezza massima `calc(100dvh - var(--space-8) * 2)`,
+`overflow-y: auto`, `overscroll-behavior: contain`. Card impilate con gap `--space-5`,
+padding interno `--space-5` — **16px contro i 20px della colonna centrale**: è una colonna di
+supporto, e la densità lo dice prima del contenuto.
+
+**È sempre l'ultima nel DOM**, dopo `<main>`. Nessuna informazione critica vive solo qui:
+sotto 1280 ogni card della colonna destra ricompare dentro la colonna centrale, in coda, o
+in una rotta propria. Una colonna che sparisce portandosi via un dato è un bug di responsive,
+non una scelta di layout.
+
+| Rotta | Che cosa ci va, in ordine | Dove finisce sotto 1280 |
+|---|---|---|
+| `/home` | **Il tuo mese** (allenamenti, volume, serie + `Vedi il profilo`) · **Azioni rapide** · **Stato del backup** | in coda al feed |
+| `/allenamento` | **Azioni rapide**: `Nuova routine`, `Nuovo split` · **Ultime usate** (3 routine) | in coda alla lista routine |
+| `/trainer` | **Riepilogo del programma** (settimana, aderenza %, prossimi 3 allenamenti) · **Azioni**: `Sostituisci un esercizio`, `Cambia giorni a settimana`, `Come funziona la progressione` | dentro la dashboard, sotto la card di oggi |
+| `/esercizi` | **il pannello elenco + filtri** (§4.26) — qui la colonna destra *è* il contenuto, non un supporto | diventa la pagina; il dettaglio diventa una rotta |
+| `/profilo` | **Calendario mensile** (§4.27) · **Totali di sempre** | il calendario va in colonna centrale, dopo le statistiche |
+| `/statistiche` | **Intervallo attivo** + legenda persistente · **PR recenti** (5) | chip d'intervallo sopra ogni grafico, come in v1 |
+| `/misure` | `Aggiungi misurazione` · **Variazioni a 30 giorni** | in coda all'elenco metriche |
+| `/impostazioni` | **niente**: l'indice vive dentro la colonna centrale (§4.28) | — |
+| `/sessione`, `/sessione/riepilogo/[id]` | **niente**: la sessione tiene il layout a due colonne di §7.3 e prende tutta l'area contenuto. La sidebar resta (è la via d'uscita che non scarta), la colonna destra non si monta | — |
+
+**Card «Azioni rapide»** — righe 48px, icona 20px in un quadrato 32×32 `--card-elevated`
+`--radius-sm`, etichetta `body`, `ChevronRight` 16px `--text-muted` a destra, separatore 1px
+fra le righe. È la forma del riferimento (`Nuova routine ›`), ridisegnata con i token di v1.
+
+| Stato | Specifica |
+|---|---|
+| default / hover / focus-visible / active | §4.14 (hover = `--surface-hover` sulla sola riga) |
+| **loading** | skeleton di 3 righe da 48px, solo al primo mount |
+| **empty** | una card di riepilogo senza dati non si mostra vuota: si mostra con lo zero e la frase («0 allenamenti questo mese. Il primo conta doppio.»), oppure non si monta affatto. Mai una card con un trattino e basta. |
+| **error** | la singola card mostra «Non riesco a leggere questo dato.» + `Riprova`; **le altre card della colonna restano vive** (l'errore non abbatte l'aside) |
+
+---
+
+### 4.21 `WorkoutFeedCard` — la card della home a feed
+
+È la card del riferimento, spogliata di tutto ciò che è sociale.
+
+```
+┌──────────────────────────────────────────────┐
+│  Schiena+Dorso                        [ ⋮ ]  │  h3 + menu 44×44
+│  ieri, 18:04                                 │  sm --text-muted
+│ ──────────────────────────────────────────── │  separatore 1px --border
+│  DURATA     VOLUME       RECORD              │  label 12/600/0.06em --text-secondary
+│  1:42       3 685 kg     🏆 9                │  num-md 16/600 tnum; Trophy --pr
+│ ──────────────────────────────────────────── │
+│  ▮ [▮] 3 × Panca inclinata (Smith)           │  corsia 3px + quadratino 40×40
+│  ▮ [▮] 3 × Lat pulldown (Macchina)           │
+│  ▮ [▮] 3 × Chest press (Macchina)            │
+│  Visualizza altri 4 esercizi                 │  <button aria-expanded>
+└──────────────────────────────────────────────┘
+```
+
+Card `--card`, `--radius-lg`, bordo 1px `--border`, `--elev-1`, padding `--space-6` (20px),
+gap fra card `--space-5` (16px).
+
+**Le tre differenze dal riferimento, e perché:**
+1. **Niente intestazione avatar + username.** Al loro posto il nome dell'allenamento in `h3`
+   e la data in `sm` `--text-muted`. In un'app a un solo utente, ripetere il proprio nome su
+   ogni card è rumore, e l'avatar è un cerchio colorato che non dice niente.
+2. **Niente piede sociale.** La card finisce con l'elenco esercizi. Nessun like, nessun
+   campo commento, nessuna icona di condivisione.
+3. **Niente miniature fotografiche.** §11.6 vieta le immagini raster nel prodotto; al posto
+   della thumbnail, il **quadratino 40×40 con l'iniziale del gruppo muscolare** già definito
+   in §4.8. La coerenza vale più della somiglianza.
+
+**Il blocco metriche.** Tre celle in riga, `display: grid; grid-template-columns: repeat(3, 1fr)`,
+etichetta sopra in `label` `--text-secondary` (8.31:1), valore sotto in `num-md` `tnum`
+`--text-primary`. Il record: icona `Trophy` 16px `--pr` + numero in `--pr` (9.71:1) + la
+parola «record» nell'etichetta sopra — **mai l'emoji della medaglia del riferimento**
+(`no-emoji-icons`). Se i record sono 0, la terza cella **non** mostra «0»: mostra
+`— ` in `--text-disabled` con `aria-label="Nessun record in questo allenamento"`.
+A 375px, se il volume supera le 5 cifre, le tre celle passano a `1fr 1fr` + riga sotto.
+
+**L'elenco esercizi.** Righe 40px, `3 × Nome (Attrezzo)`, nome in `body` `--text-primary`
+troncato a una riga con `min-w-0` (§11.9), conteggio serie in `num-md` `tnum`.
+**Corsia 3px** a sinistra di ogni riga: piena `--blue-brand` se tutte le serie sono state
+completate, piena `--pr` se la riga contiene un PR, assente altrimenti. L'elemento firma del
+sistema ricorre anche qui.
+
+| Stato | Specifica |
+|---|---|
+| **default** | 3 esercizi visibili |
+| **hover** | `--surface-hover` sul solo titolo e sulle righe cliccabili, mai sull'intera card (una card intera che si illumina non dice *dove* cliccare) |
+| **focus-visible** | anello standard sul titolo, sul menu e sul pulsante di espansione, mai sulla card |
+| **active** | `scale(0.99)` sulla riga premuta |
+| **espansa** | `aria-expanded="true"`, il pulsante diventa `Mostra meno`. **L'espansione non si anima**: le righe nuove entrano in `opacity 0→1` `--dur-1`, l'altezza cambia subito. Animare l'altezza violerebbe la regola «solo `transform` e `opacity`», e un'animazione di layout su una lista lunga è jank garantito. |
+| **con sessione in corso** | la **prima** card del feed è sostituita dalla card «Sessione in corso» (corsia `--blue-brand`, punto pulsante, cronometro `tnum`, primario `Riprendi`). Non si somma alla `SessionBar`: a ≥1024 la barra è nella sidebar e questa card è il richiamo nel contenuto; sotto 1024 la card **non** compare, perché la `SessionBar` è già fissa sopra la nav. Una sola chiamata all'azione per schermo. |
+| **loading** | 3 skeleton da 260px con il blocco metriche già disegnato (nessun CLS); solo al primo mount |
+| **empty** | il feed vuoto non mostra card: mostra l'`EmptyState` «Nessun allenamento registrato» (§4.15) |
+| **error** | la singola card danneggiata mostra «Questo allenamento è illeggibile.» + `Apri comunque` / `Elimina`; le altre card restano |
+| **reduced motion** | nessuna dissolvenza all'espansione, nessun `scale`; il punto della sessione in corso è fisso |
+
+**Paginazione.** 10 card, poi un pulsante reale `Carica altri 10` a larghezza piena, 48px.
+**Niente scroll infinito**: rompe il ritorno alla posizione quando si apre una sessione e si
+torna indietro, che è esattamente il gesto più frequente su questa schermata. Oltre le 200
+card in memoria, la lista si virtualizza (§11.6).
+
+**Menu ⋮** (44×44, `aria-label="Azioni per Schiena+Dorso del 22 settembre"`):
+`Apri il dettaglio` · `Ripeti come sessione` · `Salva come routine` · ——— · `Elimina allenamento`.
+
+---
+
+### 4.22 `ProfileHeader` + `StatsTabs` — l'intestazione del profilo
+
+**L'intestazione non ha un avatar.** Il riferimento mette avatar, username, Follower, Seguiti;
+di quei quattro, tre non esistono qui e il quarto è un cerchio con una lettera. Al loro posto,
+quello che l'utente possiede davvero: **i numeri**.
+
+```
+Profilo                                        h1
+┌───────────┬───────────┬───────────┬──────────┐
+│ ALLENAM.  │ VOLUME    │ SERIE     │ TEMPO    │  label --text-secondary
+│ 214       │ 1 890 t   │ 3 200     │ 214 h    │  h2 Archivo 22/28 700 tnum
+└───────────┴───────────┴───────────┴──────────┘
+```
+Card `--card`, `--radius-lg`, padding `--space-6`, quattro celle in griglia.
+A 375px → **griglia 2×2**, gap `--space-5`. A ≥1280 → una riga di 4.
+
+**Questi numeri si calcolano su tutte le sessioni completate, non sulla lista troncata.**
+È la chiusura di QA GRAVE 3: la lista sotto può fermarsi a 200 voci, i totali no. Due schermate
+della stessa app non possono dare due numeri diversi sullo stesso dato.
+Il tempo totale si formatta con la scala che rolla (`214 h`, `8 g 8 h`), mai `12000 min`
+(QA MINORE 3).
+
+**`StatsTabs`** — sotto l'intestazione, tre pannelli che sono **tre rotte reali**:
+
+| Tab | Rotta | Contenuto |
+|---|---|---|
+| Riepilogo | `/profilo` | calendario (sotto 1280) + feed personale |
+| Statistiche | `/statistiche` | la schermata v1, invariata |
+| Misure | `/misure` | la schermata v1, invariata |
+
+`role="tablist"` **non si usa** qui: sono link di navigazione, non pannelli locali. Si usa un
+`<nav aria-label="Sezioni del profilo">` con `<a>` reali e `aria-current="page"`, così Cmd+click
+funziona e il tasto Indietro fa quello che deve (§11.5). Segmented control: altezza 48px,
+fondo `--card-elevated`, `--radius-full`, indicatore attivo `--primary` con etichetta
+`--primary-foreground` (4.98:1), inattive `--text-secondary`.
+
+**Dentro `/profilo` → Statistiche** resta invece il gruppo a tab **locale** del riferimento
+(`Durata` / `Ripetizioni` / `Volume`) sopra il grafico: quello sì è un `role="tablist"` con
+`aria-controls`, perché cambia il contenuto di un pannello senza cambiare pagina. Lo stato
+della tab va in query string (`?metrica=durata`), non in `useState` (§11.5).
+
+| Stato | Specifica |
+|---|---|
+| default / hover / focus / active | §4.14 |
+| loading | skeleton: 4 celle da 56px nell'intestazione, un rettangolo 280px per il grafico |
+| **empty — zero allenamenti** | l'intestazione mostra i quattro zeri **con** la frase «Nessun allenamento registrato.» e la CTA `Inizia ad allenarti`. Mai quattro zeri muti. |
+| error | «Non riesco a calcolare i totali.» + `Riprova`; il feed sotto resta visibile |
+
+---
+
+### 4.23 `TrainerQuestionnaire` — il questionario iniziale
+
+Rotta a schermo intero `/trainer/questionario` (fuori dal guscio, come `/sessione`: qui si
+risponde, non si naviga). **Sei passi, una domanda per schermata** — `progressive-disclosure`:
+cinque domande in una pagina sola sembrano un modulo fiscale e si abbandonano.
+
+| # | Domanda | Controllo | Vincoli |
+|---|---|---|---|
+| 1 | Qual è il tuo obiettivo? | radio card (4) | Forza · Ipertrofia · Ricomposizione · Mantenimento. **Una scelta, obbligatoria.** |
+| 2 | Quali muscoli vuoi privilegiare? | checkbox card (7) | **massimo 2**, contatore visibile «1 di 2». Zero è ammesso («Nessuna preferenza») |
+| 3 | Che attrezzatura hai? | checkbox (14 attrezzi) + 4 preset | Preset: `Palestra completa` · `Home gym con bilanciere` · `Solo manubri` · `Corpo libero`. **Almeno uno**, obbligatorio |
+| 4 | Da quanto ti alleni? | radio card (3) | Principiante <1 anno · Intermedio 1-3 · Avanzato 3+. Ogni card **dice cosa cambia** («Principiante: progressione a ogni sessione, meno esercizi, più tecnica»), non solo l'etichetta |
+| 5 | Quanti giorni a settimana? Quanto dura una seduta? | stepper 2–6 + segmented 45/60/75/90 min | il numero di giorni determina lo split; lo si mostra subito: «4 giorni → Upper/Lower ×2» |
+| 6 | **Ecco cosa ho capito** | riepilogo | tutte le risposte, ognuna con `Modifica` in linea che torna al passo. Primario `Genera il programma` |
+
+**Radio card**: 72px di altezza minima, fondo `--card`, bordo 1px `--border-strong` (3.45:1),
+`--radius-md`, titolo `body-strong`, descrizione `sm` `--text-secondary`. Selezionata: bordo
+2px `--accent-blue` + fondo `--set-done-surface` + **icona `Check` 20px `--accent-blue` a
+destra** + `aria-checked`. Tre canali, mai il solo bordo colorato.
+Il `<label>` avvolge il controllo: nessuna zona morta (§11.8).
+
+**Barra di avanzamento**: sticky in alto, `Passo 3 di 6` in `label` `--text-secondary` +
+barra 4px, traccia `--border`, riempimento `--primary`, `transform: scaleX()` `--dur-2`.
+`role="progressbar"` con `aria-valuemin/max/now` e `aria-valuetext="Passo 3 di 6"`.
+
+**Transizione fra passi**: `translateX(±12px)` + `opacity`, `--dur-2` `--ease-out`, direzione
+coerente col verso (avanti = entra da destra). Reduced motion → solo `opacity` 150ms.
+
+| Stato | Specifica |
+|---|---|
+| default | il passo corrente; `Indietro` sempre presente (ghost, a sinistra), `Avanti` primario a destra, 48px |
+| **bozza salvata** | ogni risposta si scrive in Dexie **al momento della risposta**, non alla fine (`form-autosave`). Chiudere l'app e riaprirla riprende dal passo raggiunto |
+| **ripresa** | entrando in `/trainer` con una bozza aperta: card «Questionario in sospeso — passo 3 di 6» + `Riprendi` + ghost `Ricomincia` |
+| **error — nessuna scelta** | il primario **resta abilitato** (§11.8): si preme, compare il messaggio sotto la domanda, con icona `AlertCircle` 16px + «Scegli un obiettivo per continuare.», `aria-invalid` + `aria-describedby`, e il focus va lì |
+| **error — nessun attrezzo** | «Senza attrezzi posso generare solo esercizi a corpo libero.» + azione `Va bene, corpo libero` che seleziona il preset e prosegue. L'errore offre sempre una via d'uscita (§5.3) |
+| **loading — generazione** | la generazione è locale e dura meno di 300ms → **nessun indicatore** (§4.14). Se supera 1s (programma a 6 giorni × 12 settimane), skeleton della dashboard, non uno spinner |
+| **error — generazione** | «Non riesco a generare un programma con queste risposte.» + il motivo esatto («4 giorni a settimana con il solo corpo libero non bastano a coprire tutti i gruppi») + `Cambia le risposte` |
+| empty | non applicabile: un questionario non è mai vuoto |
+| reduced motion | nessuna traslazione fra i passi; la barra avanza senza transizione |
+
+---
+
+### 4.24 `TrainerDashboard` — il programma attivo
+
+`/trainer` è un dispatcher: mostra l'empty, la bozza in sospeso, il programma attivo, quello
+in pausa o quello finito. Non è mai una pagina che «non sa cosa dire».
+
+**Colonna centrale, in ordine:**
+
+1. **Intestazione del programma** — `h1` col nome generato (`Ipertrofia · 4 giorni · 8 settimane`),
+   sotto `Settimana 3 di 8` in `label` + barra 4px `--primary` (`scaleX`), menu ⋮ a destra
+   (44×44): `Sostituisci un esercizio` · `Cambia giorni a settimana` · `Come funziona la
+   progressione` · `Metti in pausa` · ——— · `Termina il programma`.
+
+2. **Card «Oggi»** — la card più importante della schermata, `--radius-lg`, `--elev-1`,
+   bordo 1px `--border`, padding `--space-6`, **corsia 3px `--blue-brand`** a sinistra.
+   ```
+   ▮ OGGI · Giovedì 24 settembre
+     Giorno B · Spinta                           h2
+     5 esercizi · ~60 min · 18 serie             sm --text-secondary
+     ──────────────────────────────────────────
+     Panca piana (Bilanciere)      3 × 6-8   82,5 kg
+       ↗ +2,5 kg — 3 serie su 3 a RPE 7        ← la riga del perché (§4.25)
+     Lento avanti (Manubri)        3 × 8-10   24 kg
+       → Stesso carico — settimana scorsa 2 su 3
+     … altri 3 esercizi
+     ──────────────────────────────────────────
+     [       Avvia l'allenamento       ]  56px, primario
+   ```
+
+3. **Le settimane** — lista di `<details>`/accordion, una riga per settimana, 56px:
+   `Settimana 3 · in corso · 2 di 4 fatti`, con la corsia a sinistra
+   (`--success` completata · `--blue-brand` in corso · `--warning` saltata · assente futura)
+   **più** l'etichetta testuale dello stato. Espansa: i giorni, righe 48px con il proprio stato
+   e un link al dettaglio `/trainer/giorno/[id]`. Solo la settimana corrente è espansa di
+   default; la prima apertura dopo la generazione espande la settimana 1.
+
+**Colonna destra** (≥1280): riepilogo del programma (aderenza `%`, serie fatte/previste,
+prossimi 3 allenamenti con data) + azioni rapide. Sotto 1280 scende in coda alla dashboard.
+
+#### Stati del Trainer — la tabella che il frontend implementa letteralmente
+
+| Stato | Che cosa si vede |
+|---|---|
+| **nessun programma** | `EmptyState` (§4.15): icona `ClipboardList` 40px · «Nessun programma» · «Rispondi a sei domande e ti preparo un programma di più settimane che si aggiorna da solo, in base a come vanno i tuoi allenamenti.» · primario `Inizia il questionario` + ghost `Come funziona la progressione` |
+| **bozza di questionario in sospeso** | card «Questionario in sospeso — passo 3 di 6» sopra l'empty · `Riprendi` + ghost `Ricomincia` |
+| **attivo, oggi c'è allenamento** | la card «Oggi» descritta sopra |
+| **attivo, oggi è riposo** | card «Oggi è riposo» con icona `Moon` 24px `--text-secondary`, «Il prossimo allenamento è **giovedì**: Giorno B · Spinta» + ghost `Allenati lo stesso` (che anticipa il prossimo giorno e lo registra come anticipo, non come extra) |
+| **attivo, allenamento di oggi già fatto** | card «Fatto oggi ✓» con durata, volume, PR, e link al riepilogo. Il primario sparisce: non si propone di rifare quello che è appena stato fatto |
+| **settimana saltata** | banner `role="status"` in cima alla colonna centrale, fondo `--pr-surface`, bordo 1px `--pr-border`, icona `CalendarX` 20px `--pr`, testo «Hai saltato la **settimana 3**: 0 allenamenti su 4.» e **tre azioni esplicite, nessuna preselezionata**: `Ripeti la settimana 3` (stessi carichi, nessun aumento) · `Vai alla settimana 4` (prosegue come previsto) · ghost `Rigenera da qui`. **Il programma resta fermo finché l'utente non sceglie**, e la frase lo dice: «Non tocco niente finché non decidi.» |
+| **due settimane saltate di fila** | allo stesso banner si aggiunge una quarta azione: `Riduci a 3 giorni a settimana` + la riga «Quattro giorni non stanno entrando nella tua settimana. Posso adattare il programma invece di insistere.» Adattare, non colpevolizzare |
+| **in pausa** | banner neutro (corsia `--border-strong`, icona `Pause`) «Programma in pausa dal 12 settembre» + `Riprendi`. Il programma non progredisce e non conta le settimane saltate |
+| **finito** | schermata di chiusura: `h1` «Programma completato» + i numeri veri del ciclo (allenamenti fatti su previsti, volume totale, PR conquistati, progressione dei 3 esercizi principali con il delta in kg) + primario `Genera il ciclo successivo` (che riapre il questionario **precompilato** con le risposte di prima) + ghost `Torna alle routine`. Il programma finito resta consultabile in sola lettura |
+| **loading** | skeleton: card «Oggi» da 220px + 4 righe settimana da 56px. Solo al primo mount |
+| **error** | «Non riesco a leggere il programma.» + `Riprova` + ghost `Esporta un backup` (se il dato è corrotto, prima si salva il resto) |
+
+**Avvio dell'allenamento dal Trainer**: identico al percorso A di §6.2 — un tocco su `Avvia`
+crea la sessione con esercizi, serie, intervallo di ripetizioni e **carico consigliato già nei
+campi** (come valore, non come placeholder: il Trainer *propone*, quindi scrive). La sessione
+porta `trainerDayId`, così alla chiusura il giorno si marca da sé e la progressione può girare.
+
+---
+
+### 4.25 `ProgressionReason` — il perché di ogni cambiamento
+
+**È il punto della funzione.** Un programma che cambia i carichi senza spiegarsi è un oracolo,
+e un oracolo lo si smette di seguire alla prima proposta che sembra sbagliata.
+
+#### La riga del perché
+
+Sotto il carico consigliato di **ogni** esercizio, sempre, mai in un tooltip (un'affordance
+solo-hover è vietata, §4.14):
+
+| Direzione | Icona 16px | Colore | Testo di esempio |
+|---|---|---|---|
+| aumento | `TrendingUp` | `--success` (9.27:1) | «+2,5 kg — 3 serie su 3 a RPE 7» |
+| mantenimento | `Minus` | `--text-muted` (5.44:1) | «Stesso carico — settimana scorsa 2 serie su 3» |
+| riduzione | `TrendingDown` | `--warning` (9.71:1) | «−5% — due sedute sotto le ripetizioni obiettivo» |
+| scarico programmato | `RotateCcw` | `--accent-blue` (5.93:1) | «Scarico — settimana 4 di scarico prevista» |
+| primo incontro | `Sparkle` | `--text-secondary` (8.31:1) | «Prima volta — parti leggero e tara il carico» |
+| deciso da te | `UserCog` | `--accent-blue` | «Carico scelto da te il 18 settembre» |
+
+Testo in `sm`, icona + colore + **frase**: tre canali, e la frase da sola basta (§8.2).
+Tutta la riga è un `<button>` (`aria-label="Perché 82,5 kg su Panca piana"`) che apre il
+foglio «Perché questo carico».
+
+#### Il foglio «Perché questo carico»
+
+Bottom sheet sotto 768, dialog 480px sopra (§4.16). Quattro blocchi, in quest'ordine:
+
+1. **La regola, con il suo nome** — `h3`: «Doppia progressione». Una riga di spiegazione:
+   «Quando completi tutte le serie in cima all'intervallo di ripetizioni, salgo di carico.»
+2. **I dati che l'hanno attivata**, con i numeri veri e la data — una tabellina:
+   `17 set · 3 serie su 3 · 8, 8, 8 ripetizioni · RPE 7, 7, 8`.
+   Ogni sessione citata è un link al suo riepilogo: si può andare a verificare.
+3. **Il conto** — `da 80 kg → 82,5 kg` (`+2,5 kg`, incremento minimo per il bilanciere),
+   in `num-md` `tnum`.
+4. **Che cosa serve per il prossimo passo** — **obbligatorio, su ogni esercizio**:
+   «Completa 3 × 8 a RPE ≤ 8 e la prossima volta salgo a 85 kg.»
+   È la frase che trasforma il registro in uno strumento: l'utente deve sapere *cosa fare*,
+   non solo *cosa è successo*.
+
+In fondo al foglio: ghost `Non sono d'accordo` → apre l'override manuale (un `NumberField`
+§4.18 con il carico e una riga di motivo facoltativa). **L'override finisce nel registro come
+ogni altra decisione**, con `rule: "manual"`, e da lì in poi la progressione riparte da quel
+valore. Il Trainer non «si offende» e non riscrive la scelta alla sessione successiva.
+
+#### Il registro delle decisioni — `/trainer/progressione`
+
+Cronologia inversa di **tutte** le decisioni, raggruppate per settimana, righe 72px:
+
+```
+▮  22 set · Panca piana (Bilanciere)
+   80 → 82,5 kg   ↗  Doppia progressione: 3 serie su 3 a RPE 7
+```
+Corsia a sinistra col colore della direzione + icona + testo (tre canali, di nuovo).
+Filtri in cima: `Tutte` · `Aumenti` · `Riduzioni` · `Scarichi` · `Tue scelte`, come chip
+(§4.8), con lo stato in query string.
+
+| Stato | Specifica |
+|---|---|
+| default | fino a 50 voci, poi `Carica altre 50` |
+| hover / focus / active | §4.14; il tocco apre lo stesso foglio «Perché questo carico» |
+| **loading** | 6 skeleton da 72px |
+| **empty — nessuna decisione** | «Ancora nessuna decisione» · «Il registro si riempie dopo il tuo primo allenamento del programma: ogni cambio di carico finisce qui, con il motivo.» · CTA `Vai al programma` |
+| **empty — filtro senza risultati** | «Nessuna riduzione di carico finora.» + `Azzera filtri`. Detto così, è una buona notizia |
+| **error** | «Non riesco a leggere il registro.» + `Riprova` |
+
+#### Le regole di progressione — nominate, non implicite
+
+Servono al frontend per generare la frase giusta, e all'utente per fidarsi. Sono **dati**, non
+`if` sparsi: vivono in una tabella versionata (`ruleSetVersion`, §9.5).
+
+| `rule` | Nome mostrato | Quando scatta | Effetto |
+|---|---|---|---|
+| `double-progression` | Doppia progressione | tutte le serie al tetto dell'intervallo **e** RPE medio ≤ `rpeTarget` | +1 incremento di carico; le ripetizioni tornano al fondo dell'intervallo |
+| `reps-first` | Prima le ripetizioni | serie completate ma sotto il tetto | +1 ripetizione sulla prima serie non al tetto, carico invariato |
+| `rpe-cap` | Freno da RPE | una serie a RPE ≥ 9,5 | l'aumento previsto si **dimezza** (e lo si dice) |
+| `hold-on-miss` | Mantenimento | una seduta sotto il fondo dell'intervallo | carico invariato, nessun aumento |
+| `deload-on-miss` | Riduzione | **due** sedute consecutive sotto il fondo | −10% di carico, arrotondato all'incremento |
+| `planned-deload` | Scarico programmato | settimana di scarico (ogni 4ª, configurabile) | volume −40%, carico −10% |
+| `skip-hold` | Settimana saltata | nessun allenamento registrato nella settimana | nessuna progressione; la settimana si ripete se l'utente lo sceglie |
+| `first-time` | Prima volta | nessuno storico per quell'esercizio | nessun carico proposto: il campo resta vuoto con il suggerimento «parti leggero» |
+| `manual` | Tua scelta | override dell'utente | il carico indicato diventa la nuova base |
+
+**Incrementi minimi** — token, non costanti nel codice (finiscono in `Settings`, §9.5):
+`bilanciere superiore 2,5 kg` · `bilanciere inferiore 5 kg` · `manubri 2 kg per manubrio` ·
+`macchina e cavi 1 tacca (default 5 kg)` · `corpo libero +1 ripetizione, poi zavorra +2,5 kg`.
+Nessun arrotondamento silenzioso: se l'incremento non è caricabile con i dischi posseduti, il
+foglio lo dice e propone il valore raggiungibile — la stessa regola del calcolatore di dischi
+(§6.4), che su questo punto il QA ha trovato corretta.
+
+---
+
+### 4.26 `ExerciseTwoPane` — la libreria a due pannelli (≥1280)
+
+Sotto 1280 la libreria resta **esattamente quella di v1** (§4.8): lista a pagina piena,
+dettaglio come rotta `/esercizi/[id]`. Da 1280 i due diventano visibili insieme.
+
+**Disposizione**: come il riferimento — **dettaglio al centro, elenco + filtri nella colonna
+destra** (`--pane-list-w`, 320px). È una scelta del riferimento, non mia, e la rispetto perché
+la colonna destra del guscio è già il posto dei controlli in ogni altra schermata: metterci
+anche l'elenco rende il guscio prevedibile invece di eccezionale.
+
+#### Il pannello elenco (colonna destra)
+
+```
+Libreria                    + Personalizzato
+┌────────────────────────────────────────┐
+│ Tutti gli attrezzi                  ⌄ │  select 44px
+│ Tutti i muscoli                     ⌄ │  select 44px
+│ ⌕ Cerca esercizi…                     │  input 44px
+└────────────────────────────────────────┘
+287 esercizi                               sm --text-muted, aria-live polite
+─── PETTO ──────────────────────  sticky   label 12/600/0.06em
+ [P] Panca piana (Bilanciere)              48px (--row-list-desk)
+     Petto · Bilanciere
+ [P] Panca piana (Manubri)
+ …
+```
+
+- **Due `<select>` nativi** per attrezzo e muscolo (non i chip di v1): a 320px di larghezza,
+  quattordici chip d'attrezzo occuperebbero quattro righe di scroll orizzontale. I chip
+  restano sotto 1280, dove la barra è larga quanto lo schermo. §11.2: il `<select>` nativo va
+  forzato con `background-color: var(--input); color: var(--text-primary)`.
+- **Contatore risultati** sempre visibile, `aria-live="polite"` con debounce 500ms.
+- **Raggruppamento**, con intestazioni sticky:
+  - nessun filtro muscolo attivo → per **gruppo muscolare** (Petto, Dorso, Spalle, …);
+  - filtro muscolo attivo → per **famiglia di movimento** (Panca piana, Lat pulldown, …),
+    che è un campo dello schema (`family`, §9.4), non una deduzione dal nome.
+  L'intestazione sticky vive **fuori** dal viewport virtualizzato: non è una riga della lista
+  e non entra nel calcolo delle posizioni.
+- **Densità**: righe `--row-list-desk` (48px), separatore 1px `--border`, **nessun gap**.
+  Le 48px (contro le 56 del telefono) sono deliberate: qui si punta col mouse e si scorre con
+  la rotella, e 48 fa stare 13 voci in un pannello alto 640px invece di 11. Resta ≥ `--tap-min`.
+- **Scroll**: `overflow-y: auto`, `overscroll-behavior: contain`, `scrollbar-gutter: stable`
+  (senza, la comparsa della barra fa saltare la larghezza delle righe a ogni filtro).
+
+#### Prestazioni percepite su 250-300 voci
+
+| Problema | Regola |
+|---|---|
+| montaggio di 300 righe | **virtualizzazione obbligatoria** (`@tanstack/react-virtual`); `estimateSize` **costante** = `--row-list-desk`, nessuna misura a runtime |
+| filtro che «lagga» | filtro locale in <16ms su 300 voci → **nessuno skeleton al cambio filtro** (§4.14: sotto 1s nessun indicatore). Lo skeleton esiste solo al primo mount |
+| campo di ricerca che scatta | input **non controllato** con eco immediato sul campo; il filtro parte con `debounce 120ms`. Il campo non aspetta mai il filtro |
+| annuncio a raffica | il contatore si annuncia con debounce 500ms, mai per tasto |
+| salto dello scroll al ritorno | la posizione dell'elenco si conserva quando cambia solo il dettaglio: il pannello **non si rimonta** |
+| lista lunga senza virtualizzazione (fallback) | `content-visibility: auto` + `contain-intrinsic-size: var(--row-list-desk)` |
+| navigazione da tastiera nella lista virtuale | il contenitore espone `aria-rowcount`; le righe fuori dal viewport **non** sono nel tab order, e la selezione corrente è sempre montata |
+
+#### Il pannello dettaglio (centro)
+
+Il contenuto di `/esercizi/[id]` di v1, invariato: nome, muscolo, attrezzo, storico, 1RM
+stimato **con la regola dei domini di §4.10-bis**, PR, note, azioni.
+
+#### Ordine di lettura e tastiera — il punto delicato
+
+L'elenco è a destra ma **si usa prima** del dettaglio. §7.3 impone che l'ordine del DOM
+coincida con quello visivo, quindi il DOM è `main` (dettaglio) poi `aside` (elenco), e la
+navigazione da tastiera sarebbe costretta ad attraversare tutto il dettaglio per arrivare ai
+filtri. Si risolve con due link reali, non con un `tabindex` acrobatico:
+
+- **in cima alla colonna centrale**, primo elemento focalizzabile: `<a href="#elenco-esercizi">`
+  **«Vai all'elenco esercizi»**, visibile solo in focus, stesso stile dello skip link (§8.4);
+- **in fondo al pannello dettaglio**: `<a href="#elenco-esercizi">` **«Torna all'elenco»**,
+  sempre visibile, in `ghost`.
+
+Alla selezione di un esercizio: il focus va sull'`<h1>` del dettaglio (`tabIndex={-1}`) e
+`#sr-system` annuncia «Panca piana con bilanciere, dettaglio aperto». La voce selezionata
+nell'elenco porta `aria-current="true"`, fondo `--surface-hover` e **corsia 3px
+`--blue-brand`** (non solo il fondo: su `--card` la differenza di fondo è 1.36:1).
+
+| Stato | Specifica |
+|---|---|
+| default | elenco pieno, dettaglio dell'ultimo esercizio aperto (da query string) |
+| **empty — nessuna selezione** | il centro mostra: icona `Dumbbell` 40px · «Scegli un esercizio» · «Seleziona una voce dall'elenco per vedere storico, 1RM stimato e record.» — è lo stato del riferimento, e va implementato, non lasciato bianco |
+| **empty — filtri senza risultati** | nel pannello elenco: «Nessun esercizio per *Dorso + Cavi*.» + `Azzera filtri` + `Crea esercizio personalizzato` |
+| **empty — libreria vuota** | §4.15 |
+| loading | elenco: 8 skeleton da 48px · centro: skeleton del dettaglio |
+| error | i due pannelli falliscono **indipendentemente**: un dettaglio illeggibile non svuota l'elenco |
+| transizione di selezione | **crossfade** del solo pannello centrale, `opacity` `--dur-1`. Nessuna traslazione: il contenitore non si sposta. Reduced motion → cambio immediato |
+
+---
+
+### 4.27 `MonthCalendar` — il calendario mensile del profilo
+
+Componente nuovo. Mostra i giorni in cui c'è stato un allenamento.
+
+```
+        ‹        settembre 2026        ›          h3 + due bottoni 44×44
+   L    M    M    G    V    S    D                label --text-secondary
+  31    1    2    3    4    5    6                fuori mese: --text-disabled
+   7   (8)   9   10   11  (12)  13                (n) = giorno allenato
+  14   15  (16) (17)  18  (19)  20
+  21    22   23   24   25   26   27                21 = oggi (numerale sottolineato)
+  28   29   30    1    2    3    4
+```
+
+Griglia `role="grid"`, 7 colonne, `gap: var(--cal-gap)` (4px). Cella: area **44×44**
+(`--tap-min`) con cerchio visivo `--cal-cell` (40px). A 375px la larghezza disponibile è
+343px → `(343 − 6×4) / 7 = 45,5px`: i 44 ci stanno senza scroll orizzontale.
+Numerale in `num-md` `tnum` (le cifre non devono ballare fra una settimana e l'altra).
+
+#### Gli stati della cella — e il «mai solo colore»
+
+Due canali **ortogonali**, così non si contendono mai lo stesso segnale:
+**il riempimento dice «allenato», la sottolineatura dice «oggi».**
+
+| Stato | Resa | Contrasto | Secondo canale |
+|---|---|---|---|
+| **giorno allenato** | cerchio pieno `--primary` `#1268EC`, numerale `#FFFFFF` peso 700 | **4.98:1** | **barra 3px `--blue-brand` sotto il cerchio**, larga quanto il cerchio, `--radius-xs` — la corsia del sistema, girata di 90° |
+| **giorno allenato, 2+ sessioni** | come sopra | — | la barra sotto diventa **due segmenti** da 3px con gap 3px + `aria-label` «2 allenamenti» |
+| **giorno non allenato (passato)** | nessun riempimento, numerale `--text-primary` peso 400 | 16.12:1 su `--card` | — |
+| **oggi** | numerale **sottolineato** (`text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 2px`) `--accent-blue` peso 700 | 5.93:1 | `sr-only` «oggi» dentro l'etichetta della cella |
+| **oggi + allenato** | cerchio pieno **e** numerale sottolineato in bianco | 4.98:1 | barra sotto + «oggi» in etichetta |
+| **giorno futuro** | numerale `--text-muted`, non interattivo (non è un `<button>`) | 5.44:1 | — |
+| **fuori dal mese** | numerale `--text-disabled`, `aria-hidden="true"`, non focalizzabile — serve solo a chiudere la griglia | 2.92:1 (esente: non porta informazione) | — |
+| **hover** su giorno allenato | cerchio `--primary-hover`, cursore a puntatore | bianco 5.81:1 | — |
+| **focus-visible** | `outline: 2px solid var(--ring); outline-offset: 2px` sulla cella | 6.59:1 su `--card` | — |
+| **active** | `scale(0.94)` sul cerchio, `--dur-1` | — | — |
+| **loading** | griglia di 42 quadrati skeleton 40×40 con l'intestazione dei giorni già disegnata (nessun CLS) | — | — |
+| **empty — mese senza allenamenti** | la griglia resta (serve comunque a orientarsi) + sotto, in `sm` `--text-secondary`: «Nessun allenamento a settembre.» + link `Vai a agosto (8 allenamenti)`, cioè **al mese più recente che ne ha** | — | — |
+| **empty — nessun allenamento mai** | il calendario **non si monta**: al suo posto l'`EmptyState` «Nessun allenamento registrato» (§4.15) | — | — |
+| **error** | «Non riesco a leggere il calendario.» + `Riprova`; il resto del profilo resta | — | — |
+
+**Prova del grigio**: togliendo tutti i colori, un giorno allenato resta riconoscibile dal
+riempimento scuro, dalla barra sotto e dal peso 700; oggi resta riconoscibile dalla
+sottolineatura. Nessuno dei due dipende dalla tinta.
+
+#### Tastiera e semantica (pattern griglia APG)
+
+- `role="grid"` con `aria-labelledby` sul titolo del mese; `<th scope="col">` per i giorni
+  della settimana, con il nome **completo** in `sr-only` («lunedì») accanto alla lettera.
+- **Roving tabindex**: una sola cella nel tab order (oggi se è nel mese in vista, altrimenti
+  il primo giorno allenato, altrimenti il giorno 1). Le altre `tabindex="-1"`.
+- `←` `→` giorno · `↑` `↓` settimana · `Home` / `End` inizio/fine settimana ·
+  `PagSu` / `PagGiù` mese precedente/successivo. Uscire dal mese con le frecce lo cambia.
+- Etichetta di cella completa: `"12 settembre 2026, 1 allenamento: Schiena+Dorso"` oppure
+  `"13 settembre 2026, nessun allenamento"`.
+- `Invio` su un giorno allenato → `/profilo/sessione/[id]`; con 2+ sessioni → popover con
+  l'elenco (righe 48px), non una scelta arbitraria.
+- Pulsanti di mese 44×44, `aria-label="Mese precedente, agosto 2026"`. Al cambio, `#sr-system`
+  annuncia «settembre 2026, 8 allenamenti» — **una volta sola**, non a ogni cella attraversata.
+- Il mese in vista sta nella **query string** (`/profilo?mese=2026-09`), non in `useState`
+  (§11.5): il tasto Indietro torna al mese precedente e il link è condivisibile.
+
+**Movimento**: cambio mese `translateX(±8px)` + `opacity`, `--dur-2` `--ease-out`, direzione
+coerente col verso. Reduced motion → solo `opacity` 150ms, nessuna traslazione.
+
+---
+
+### 4.28 `SettingsTwoPane` — impostazioni a indice + pannello
+
+Oggi è una pagina sola con due figlie. In v2 diventa **indice a sinistra, pannello a destra**,
+tutto **dentro la colonna centrale** (la colonna destra del guscio resta vuota su questa rotta:
+un indice è già una colonna di supporto, due sarebbero una di troppo).
+
+Griglia `grid-template-columns: var(--settings-index-w) minmax(0, 1fr)`, gap `--space-8`,
+separatore verticale 1px `--border` fra le due.
+
+#### L'indice
+
+Gruppi con intestazione `label` `--text-secondary`, voci da 44px, icona 20px, etichetta `body`.
+
+| Gruppo | Voci | Rotta |
+|---|---|---|
+| **Allenamento** | Timer di recupero · RPE · Unità e arrotondamenti · Bilanciere e dischi · Riscaldamento | `/impostazioni/allenamento` |
+| **App** | Tema · Lingua · Suono e vibrazione | `/impostazioni/app` |
+| **Dati** | Backup ed esportazione · Importa · Cancella tutti i dati | `/impostazioni/dati` |
+| **Info** | Versione, licenze, dove stanno i tuoi dati | `/impostazioni/info` |
+
+**Tema e Lingua ci sono anche se non hanno alternative.** La voce Tema dice «Scuro — è l'unico
+tema di Lifted», la voce Lingua dice «Italiano — l'unica lingua di Lifted». Una voce assente
+fa cercare; una voce che spiega chiude la domanda. Nessun interruttore finto.
+
+| Stato voce | Specifica |
+|---|---|
+| default | icona e testo `--text-secondary` |
+| hover | fondo `--surface-hover`, testo `--text-primary` (13.02:1) |
+| focus-visible | anello `--ring`, offset 2px |
+| **attiva** | fondo `--surface-hover` + **corsia 2px `--blue-brand`** a sinistra + testo `--accent-blue` (4.79:1) peso 600 + `aria-current="page"` |
+| badge | solo su **Dati**: punto `--warning` + `aria-label` «Dati, nessun backup da 18 giorni» |
+
+#### Il pannello
+
+`h1` della sezione **dentro `<main>`** (chiude QA MINORE 6: oggi l'intestazione sta fuori dal
+landmark), righe di impostazione da 56px con label a sinistra e controllo a destra, gruppi
+separati da `--space-7`, testo di aiuto in `sm` `--text-muted` **sotto** il controllo — non
+come placeholder.
+
+**Le impostazioni si salvano al cambio, non con un `Salva`.** Il controllo che si muove *è* la
+conferma; un toast a ogni interruttore è rumore. `#sr-system` annuncia in `polite`
+«Timer di recupero: 90 secondi». Il pulsante `Salva` esiste **solo** dove il form ha più campi
+interdipendenti (inventario dischi, percentuali di riscaldamento) e lì vale §11.8: resta
+abilitato, si valida alla pressione, il focus va sul riepilogo errori.
+
+| Stato | Specifica |
+|---|---|
+| default | la sezione scelta |
+| **nessuna sezione (solo `/impostazioni`)** | a ≥1024 si **reindirizza** alla prima sezione (`/impostazioni/allenamento`): un pannello vuoto accanto a un indice pieno è una schermata che non dice niente. A <1024 `/impostazioni` **è** l'indice, e il pannello è la rotta figlia (lo stesso master-detail che `/misure` usa già) |
+| loading | skeleton di 6 righe da 56px nel pannello; l'indice è statico e non ne ha bisogno |
+| error | banner in cima al pannello «Non riesco a leggere le impostazioni. Sto usando i valori di fabbrica.» + `Riprova` — e i controlli restano **usabili**, non bloccati |
+| empty | non applicabile: una sezione di impostazioni ha sempre contenuto |
+| azione distruttiva | `Cancella tutti i dati` resta con il dialog di §5.2, in fondo alla sezione Dati, in `destructive`, separata dalle altre da `--space-8` e da un separatore |
+
+---
+
 ## 5. Microcopy di sistema (italiano)
 
 ### 5.1 L'avviso che i dati sono solo qui
@@ -1114,36 +2036,51 @@ Il pulsante sicuro è a sinistra ed è quello che riceve il focus all'apertura.
 
 ## 6. Flussi e navigazione
 
-### 6.1 Mappa delle rotte
+### 6.1 Mappa delle rotte — **aggiornata in v2**
 
 ```
-/                                   → redirect a /allenamento
+/                                   → redirect a /home          ← era /allenamento
 
-TAB 1 ─ /allenamento                quick start + elenco routine per split
+TAB 1 ─ /home                       ★ NUOVA — avvio in cima + card di oggi + feed
+
+TAB 2 ─ /allenamento                quick start + elenco routine per split
         /allenamento/routine/nuova          editor routine (creazione)
         /allenamento/routine/[id]           dettaglio routine (sola lettura + Avvia)
         /allenamento/routine/[id]/modifica  editor routine (modifica)
 
-TAB 2 ─ /profilo                    riepilogo personale + storico sessioni
-        /profilo/sessione/[id]              dettaglio sessione passata (+ PR ottenuti)
+TAB 3 ─ /trainer                    ★ NUOVA — dashboard, o empty, o programma finito
+        /trainer/questionario               ★ 6 passi, a schermo intero (fuori dal guscio)
+        /trainer/giorno/[id]                ★ dettaglio del giorno + Avvia
+        /trainer/progressione               ★ registro delle decisioni
 
-TAB 3 ─ /esercizi                   libreria + ricerca + filtri muscolo/attrezzo
+TAB 4 ─ /esercizi                   libreria: 2 pannelli a ≥1280, lista sotto
         /esercizi/nuovo                     crea esercizio personalizzato
-        /esercizi/[id]                      dettaglio: storico, 1RM stimato, PR, note
+        /esercizi/[id]                      dettaglio (pannello centrale a ≥1280)
         /esercizi/[id]/modifica             modifica esercizio personalizzato
 
-TAB 4 ─ /misure                     elenco metriche con ultimo valore e delta
+TAB 5 ─ /profilo                    intestazione a numeri + statistiche + calendario + feed
+        /profilo/sessione/[id]              dettaglio sessione passata (+ PR ottenuti)
+        /statistiche                        ⇢ pannello «Statistiche» del profilo (rotta invariata)
+        /misure                             ⇢ pannello «Misure» del profilo (rotta invariata)
         /misure/[metrica]                   grafico + elenco voci + aggiungi
 
-TAB 5 ─ /statistiche                volume settimanale/mensile, distribuzione, 1RM, PR
-
-FUORI DALLE TAB
+FUORI DALLE TAB E FUORI DAL GUSCIO
         /sessione                   sessione attiva, a schermo intero
         /sessione/riepilogo/[id]    riepilogo post-workout con i PR
-        /impostazioni               timer default, unità, RPE on/off, bilanciere, dischi
-        /impostazioni/backup        export JSON/CSV, import JSON, cancella tutto
-        /impostazioni/info          versione, avviso dati locali, licenze
+        /impostazioni               ≥1024 → redirect a /impostazioni/allenamento
+                                    <1024 → l'indice
+        /impostazioni/allenamento   ★ timer, RPE, unità, bilanciere e dischi, riscaldamento
+        /impostazioni/app           ★ tema, lingua, suono e vibrazione
+        /impostazioni/dati          ★ export JSON/CSV, import, cancella tutto  (era /backup)
+        /impostazioni/info          versione, dove stanno i dati, licenze
 ```
+
+**Rotte che spariscono**: nessuna. `/impostazioni/backup` si rinomina in `/impostazioni/dati`
+e mantiene un redirect permanente — i link nella microcopy di §5.1 puntano lì.
+
+**Stato di vista nella query string** (§11.5), voci nuove:
+`/profilo?mese=2026-09` · `/esercizi?q=…&attrezzo=…&muscolo=…&sel=<id>` ·
+`/profilo?metrica=durata` · `/trainer/progressione?filtro=aumenti`
 
 **Strumenti come parametro di ricerca** (deep-link + il tasto Indietro li chiude):
 - `?tool=warmup&target=100&exerciseId=…` → sheet calcolatore riscaldamento
@@ -1320,6 +2257,90 @@ reimportato. I CSV servono per Excel: non si reimportano."
 | Passano più di 6 ore | al rientro, dialog: "Hai un allenamento aperto da 7 ore. Vuoi terminarlo o scartarlo?" → `Riprendi` · `Termina adesso` · `Scarta`. |
 | `beforeunload` | nessun blocco: i dati sono già scritti. Un prompt del browser qui è solo rumore. |
 
+### 6.7 La home diventa il feed — la decisione, e perché
+
+**Domanda posta:** la home diventa il feed con l'avvio in cima, oppure restano due schermate?
+
+**Decisione: tutte e due.** `/home` è il feed **con l'avvio in cima**, e `/allenamento`
+sopravvive come schermata delle routine. Non è un compromesso, sono due lavori diversi:
+
+| | `/home` (feed) | `/allenamento` (routine) |
+|---|---|---|
+| Domanda a cui risponde | «cosa ho fatto» | «cosa faccio adesso» |
+| Quando si apre | più volte a settimana, anche fuori dalla palestra | una volta per sessione, in palestra, di fretta |
+| Cresce nel tempo? | **sì**, una card a sessione | no, resta di 3-10 voci |
+| Modo d'uso | si scorre | si colpisce |
+
+**Perché non fonderle.** Fondere significa mettere l'elenco routine sotto una lista che si
+allunga ogni settimana. Dopo due mesi il pulsante `AVVIA` della routine è a tre scroll, e il
+percorso critico di §6.2 (2 tocchi dall'apertura al primo campo) diventa «scorri, cerca, tocca».
+Il percorso critico di quest'app è l'unica cosa che non si tocca.
+
+**Perché non lasciare solo `/allenamento`.** Perché lo storico oggi è sepolto in fondo al
+profilo, e il riferimento ha ragione su questo: vedere l'ultimo allenamento all'apertura è ciò
+che fa tornare.
+
+**Cosa c'è in `/home`, in ordine:**
+
+| # | Blocco | Nota |
+|---|---|---|
+| 1 | `<h1>Home` | a ≥1024 con `--space-9` di respiro sopra |
+| 2 | `QuickStart size="compact"` (§4.6) | 80px: primario `Avvia allenamento` + secondario `Scegli una routine`, in riga. Con una sessione attiva diventa `Riprendi · 32:14` |
+| 3 | `TrainerTodayCard` | **solo se** esiste un programma attivo. Versione compatta della card «Oggi» (§4.24): nome del giorno, 3 esercizi, `Avvia`. Senza programma **non compare**: l'invito al Trainer sta in `/trainer`, non come pubblicità in cima alla home |
+| 4 | `<h2>Allenamenti recenti` + le `WorkoutFeedCard` | §4.21 |
+
+`QuickStart` è **lo stesso componente** di `/allenamento` in due taglie (`compact` / `full`),
+non due componenti che si somigliano. La duplicazione dell'azione primaria su due schermate è
+voluta: è l'azione primaria dell'app intera.
+
+**Il conto dei passi, prima e dopo:**
+
+| Percorso | v1 | **v2** |
+|---|---|---|
+| apertura → primo campo, da routine | 2 tocchi (`/allenamento` → `AVVIA`) | **2 tocchi** (`/home` → `Scegli una routine` → `AVVIA`)… **3**. Da `/allenamento`, **2**, invariato |
+| apertura → primo campo, sessione vuota | 4 tocchi | **2 tocchi** (`/home` → `Avvia allenamento` → `+ Aggiungi esercizio`) — **migliora** |
+| apertura → allenamento di oggi del Trainer | — | **2 tocchi** (`/home` → `Avvia` sulla card di oggi) |
+| apertura → ultimo allenamento fatto | 3 tocchi (Profilo → scorri → tocca) | **1 tocco**: è la prima card della home |
+
+**Punto d'attrito residuo, dichiarato:** chi parte sempre dalla stessa routine paga un tocco
+in più se apre la home invece della tab Allenamento. Si chiude senza aggiungere schermate:
+la card `QuickStart` compatta mostra, come azione secondaria, **il nome dell'ultima routine
+usata** invece del generico «Scegli una routine» (`Riprendi Push A ›`). Torna a 2 tocchi per
+il caso frequente, resta 3 per gli altri.
+
+### 6.8 Flusso: dal questionario al primo allenamento del Trainer
+
+**Primo accesso → primo valore: 8 passi, di cui 6 sono risposte.**
+
+| # | Schermo | Azione | Attrito |
+|---|---|---|---|
+| 1 | `/trainer` (empty) | `Inizia il questionario` | — |
+| 2-7 | `/trainer/questionario` | sei domande, una per schermata | **il passo 3 (attrezzatura) è quello che fa fermare**: quattordici caselle sono troppe da leggere in piedi. Risolto con i **quattro preset** in cima, che coprono il 90% dei casi con un tocco: le caselle restano sotto, per chi vuole correggere |
+| 8 | `/trainer` (dashboard) | il programma è generato e la card «Oggi» è già in cima | — |
+| 9 | `/sessione` | `Avvia l'allenamento` — esercizi, serie, intervallo di reps **e carichi consigliati già nei campi** | — |
+
+Da qui in poi il ciclo della serie è quello di §6.2, invariato: 3 tocchi per serie.
+
+**Il ritorno — quello che rende progressivo il programma:**
+
+| # | Evento | Cosa succede |
+|---|---|---|
+| 1 | `TERMINA` sulla sessione | la sessione porta `trainerDayId`: il giorno si marca `completata` |
+| 2 | subito dopo il salvataggio | la progressione gira sui **soli esercizi di quel giorno** e scrive una `ProgressionDecision` per ciascuno (§9.5) |
+| 3 | `/sessione/riepilogo/[id]` | in coda al riepilogo, la card **«Cosa cambia la prossima volta»**: 3-5 righe del perché (§4.25), con il delta. È il momento in cui l'utente ha più attenzione e meno domande |
+| 4 | apertura successiva | la card «Oggi» mostra i carichi nuovi, ciascuno con la sua riga del perché |
+
+**Punti d'attrito identificati e risolti:**
+
+| Attrito | Dove | Risoluzione |
+|---|---|---|
+| «Perché mi propone questo carico?» | ogni esercizio | la riga del perché è **sempre visibile**, non in un tooltip; il foglio dà i numeri e le sessioni citate sono link verificabili |
+| «Non sono d'accordo, e adesso?» | carico proposto | `Non sono d'accordo` → override manuale; l'override **entra nel registro** e diventa la nuova base, non viene riscritto alla sessione dopo |
+| «Ho saltato una settimana, ho rotto tutto?» | rientro | il banner della settimana saltata offre tre strade e **non ne sceglie nessuna**; la frase «Non tocco niente finché non decidi» toglie l'ansia |
+| «Sto seguendo il programma o le mie routine?» | due sistemi in parallelo | il Trainer **non sostituisce** le routine: convivono. L'unica cosa che le lega è che un giorno del Trainer si può salvare come routine, non il contrario |
+| Quattordici caselle di attrezzatura | passo 3 | quattro preset in cima |
+| «Che cosa mi serve per salire?» | ogni esercizio | frase del prossimo passo, obbligatoria su ogni riga del perché |
+
 ---
 
 ## 7. Layout responsive
@@ -1369,6 +2390,99 @@ reimportato. I CSV servono per Excel: non si reimportano."
 **Cosa non cambia mai, a nessuna larghezza**: le dimensioni minime dei target (48px in
 sessione), la scala tipografica, i contrasti, l'ordine di focus.
 
+> **v2 — la §7.3 qui sopra resta valida per `/sessione` e `/sessione/riepilogo/[id]`**, che
+> stanno fuori dal guscio e mantengono le due colonne. Per tutte le altre rotte il layout a
+> ≥1024 è quello che segue: il **rail da 240px non esiste più**.
+
+### 7.4 v2 — 1024-1279px: due colonne (sidebar + centro)
+
+| Cosa | Comportamento |
+|---|---|
+| **Navigazione** | la bottom nav **sparisce**; compare la `Sidebar` di `--sidebar-w` (264px), fissa a sinistra, con ricerca globale, sei voci, sotto-voci di Profilo, Impostazioni e blocco stato locale (§4.19) |
+| **Guscio** | `<body>` prende `padding-left: var(--sidebar-w)`. Il `<main>` perde il `padding-bottom` della nav e della `SessionBar` (che ora vive nella sidebar) |
+| **Colonna centrale** | `max-width: var(--content-max)` (760px), centrata, gutter `--shell-gutter` (24px) |
+| **Colonna destra** | **non esiste**. Ogni sua card scende in coda alla colonna centrale, nell'ordine di §4.20 |
+| **Home** | feed a colonna singola, card a 760px |
+| **Esercizi** | **una** pagina: lista a 2 colonne di righe (come 768), dettaglio come rotta |
+| **Impostazioni** | indice + pannello già a due colonne dentro i 760px (260 + 32 + 468) |
+| **Profilo** | calendario in colonna centrale, dopo le statistiche, larghezza piena |
+| **Trainer** | dashboard a colonna singola; il riepilogo del programma va in coda |
+| **Sessione** | invariata (§7.3), ma **dentro** il guscio: la sidebar resta visibile (è la via d'uscita che non scarta la sessione), la colonna destra non compare mai |
+
+### 7.5 v2 — ≥1280px: tre colonne
+
+```
+│◄── 264 ──►│◄────── centro ──────►│◄── 320 ──►│
+│  Sidebar  │   main (card)        │   aside   │
+│  fixed    │                      │   sticky  │
+```
+
+```css
+/* area contenuto: tutto ciò che non è la sidebar */
+.shell {
+  padding-left: var(--sidebar-w);
+}
+.shell__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-right-w);
+  gap: var(--shell-gutter-lg);
+  max-width: var(--shell-max);        /* 1120px */
+  margin-inline: auto;
+  padding-inline: var(--shell-gutter-lg);
+}
+```
+
+| Larghezza | Sidebar | Centro | Destra |
+|---|---|---|---|
+| 1280 | 264 | **632px** | 320 |
+| 1440 | 264 | **760px** | 320 |
+| >1440 | 264, resta a filo a sinistra | 768px (l'area si centra nello spazio rimasto) | 320 |
+
+| Cosa | Comportamento a ≥1280 |
+|---|---|
+| **Colonna destra** | compare, `<aside aria-label="Riepilogo e azioni rapide">`, `position: sticky; top: var(--space-8)`, scroll proprio con `overscroll-behavior: contain` |
+| **Esercizi** | **due pannelli** (§4.26): dettaglio al centro, elenco + filtri nella colonna destra; i chip filtro diventano due `<select>` |
+| **Profilo** | il calendario si sposta **nella colonna destra**; statistiche e feed restano al centro |
+| **Home** | «Il tuo mese» + azioni rapide + stato backup passano a destra |
+| **Trainer** | riepilogo del programma e azioni passano a destra; la card «Oggi» resta al centro |
+| **Statistiche** | griglia 2 colonne per i grafici dentro il centro (632-760px), altezza 280px — **non** 3 colonne: a 760px tre grafici sono illeggibili |
+| **Misure** | master-detail dentro il centro (elenco 240px + grafico), colonna destra con `Aggiungi misurazione` e le variazioni a 30 giorni |
+| **Impostazioni** | indice 260 + pannello dentro il centro; **colonna destra vuota** e quindi non montata |
+| **Ordine DOM** | `skip link` → `nav` (sidebar) → `main` → `aside`. **Non cambia a nessuna larghezza.** L'unica eccezione motivata è la libreria a due pannelli, e si risolve con due link reali (§4.26), non con `tabindex` |
+
+### 7.6 Che cosa succede **fra 768 e 1024** — e perché non succede niente
+
+Fra `--bp-md` e `--bp-lg` il layout resta **quello di v1 §7.2**: bottom nav, contenuto centrato
+a 680px, griglie a 2 colonne, sheet che diventano dialog a 768. Nessuna sidebar, nessuna
+colonna destra.
+
+**Il conto che decide**: a 1023px, una sidebar da 264px lascia al contenuto 759px meno i
+gutter, cioè ~711px — ma a 1023px senza sidebar il contenuto ne ha già 680 di massimo e tutta
+la larghezza per i margini. Si guadagnerebbero 30px di contenuto in cambio di 264px di cromo
+permanente. Peggio: 768-1023 è la fascia dell'**iPad in verticale e in orizzontale**, dove
+l'input è il dito e la bottom nav è raggiungibile col pollice mentre una sidebar a sinistra
+non lo è. La soglia sta a 1024 perché è lì che il dispositivo smette di essere quasi sempre
+touch.
+
+**Le tre schermate che cambiano forma a 1024, non prima**: la libreria (resta a lista piena),
+le impostazioni (restano master-detail a due rotte), il profilo (il calendario resta in colonna).
+
+### 7.7 Riepilogo — le tre larghezze richieste
+
+| | **375** | **768** | **1440** |
+|---|---|---|---|
+| Navigazione | bottom nav 5 tab, 56px + safe area | bottom nav, etichette accanto alle icone | **Sidebar 264px** fissa con ricerca e blocco stato locale |
+| Colonne | 1 | 1 (max 680px) | **3**: 264 / 760 / 320 |
+| Gutter | `--space-5` (16px) | `--space-7` (24px) | `--shell-gutter-lg` (32px) |
+| Home | card feed a piena larghezza, metriche 3 celle | idem, max 680 | feed al centro, «Il tuo mese» + azioni a destra |
+| Esercizi | lista piena, chip filtro a scorrimento | lista a 2 colonne, chip su 2 righe | **due pannelli**: dettaglio al centro, elenco 320 a destra con 2 `<select>` |
+| Trainer | card «Oggi» piena, settimane in accordion | idem, max 680 | card «Oggi» al centro, riepilogo programma a destra |
+| Calendario | griglia piena, cella 45,5px | griglia in card da 680, cella 44 + gap maggiore | nella colonna destra, cella 40 (area 44) |
+| Profilo | intestazione **2×2**, tab a segmenti | intestazione 4 celle in riga | intestazione 4 celle, calendario a destra |
+| Impostazioni | `/impostazioni` = indice, sezione = rotta figlia | idem | indice 260 + pannello, nella colonna centrale |
+| Sessione | §7.1 | §7.2 | §7.3 invariata: **la sidebar resta** (è l'unica via per uscire senza scartare), la **colonna destra no** — la sessione prende tutta l'area contenuto |
+| Cosa si nasconde | niente | niente | niente: ciò che sta a destra sotto 1280 vive in coda al centro |
+
 ---
 
 ## 8. Contratto di accessibilità
@@ -1389,6 +2503,25 @@ Elenco verificabile voce per voce. È quello che il `qa-engineer` spunterà.
 - [ ] Serie dei grafici ≥ **3:1** su `--card` (misurate: 5.93 → 11.04).
 - [ ] Etichette degli assi ≥ **4.5:1** (`--chart-axis` = 8.31:1).
 
+**v2 — coppie nuove, tutte misurate su `--surface-hover` `#262A34`**, che in v1 compariva solo
+come stato di pressione e in v2 è il **fondo permanente della voce di sidebar attiva** e della
+voce di impostazioni attiva. Sono rapporti nuovi e vanno verificati come gli altri:
+
+| Coppia | Rapporto | Uso | Verdetto |
+|---|---|---|---|
+| `--text-primary` `#F2F4F7` su `#262A34` | **13.02:1** | testo di voce in hover | ✓ |
+| `--accent-blue` `#3E96FF` su `#262A34` | **4.79:1** | etichetta e icona della voce **attiva** | ✓ (margine 0.29) |
+| `--text-secondary` `#A9B2C1` su `#262A34` | **6.72:1** | metadati su riga in hover | ✓ |
+| `--ring` `#6FB4FF` su `#262A34` | **6.59:1** | anello di focus dentro la sidebar | ✓ (soglia 3) |
+| `#FFFFFF` su `--primary` `#1268EC` | **4.98:1** | numerale del giorno allenato nel calendario | ✓ |
+| `#FFFFFF` su `--primary-hover` `#0F5ED8` | **5.81:1** | giorno del calendario in hover | ✓ |
+| `--pr` `#FFB020` su `--pr-surface` `#2E2208` | **8.52:1** | banner «settimana saltata» | ✓ |
+| `--success` `#32D74B` su `--card` | **9.27:1** | riga del perché, direzione «aumento» | ✓ |
+| `--text-muted` `#838FA4` su `#262A34` | **4.40:1** | — | ❌ **vietato**, come in v1: su `--surface-hover` il minimo resta `--text-secondary`. Vale anche per la sidebar |
+
+- [ ] Nessun colore nuovo entra nel sistema con la v2: la grep dei token deve dare lo stesso
+      insieme di hex di v1.
+
 ### 8.2 Nessun significato affidato al solo colore
 
 - [ ] **Tipo di serie**: la lettera `W` / `D` / `F` (o il numero) è sempre presente nella
@@ -1402,6 +2535,27 @@ Elenco verificabile voce per voce. È quello che il `qa-engineer` spunterà.
 - [ ] **Serie dei grafici**: forma del `dot` diversa + legenda testuale.
 - [ ] **Dischi**: peso stampato su ogni disco + altezza proporzionale + legenda testuale.
 - [ ] **Errori**: icona `AlertCircle` + messaggio, mai solo il bordo rosso.
+
+**v2 — voci nuove:**
+
+- [ ] **Voce di sidebar attiva**: corsia 3px + fondo + icona riempita + peso 600 + colore +
+      `aria-current="page"`. Togliendo il colore, la corsia e il riempimento dell'icona
+      bastano a dire quale voce è attiva.
+- [ ] **Giorno allenato nel calendario**: riempimento **+ barra 3px sotto la cella** + peso
+      700 + etichetta parlata («1 allenamento»). **Oggi**: sottolineatura del numerale, non un
+      colore. I due segnali sono ortogonali e si sommano senza confondersi.
+- [ ] **Stato della settimana nel Trainer**: corsia colorata **+ la parola**
+      («in corso», «completata», «saltata»), mai il solo binario.
+- [ ] **Direzione della progressione**: icona (`TrendingUp`/`Minus`/`TrendingDown`/`RotateCcw`)
+      + colore + **la frase**. La frase da sola è sufficiente a capire cosa è successo.
+- [ ] **Card «record» del feed**: icona `Trophy` + numero + la parola «record». **Nessuna
+      emoji**: la 🏅 del riferimento non entra nel prodotto.
+- [ ] **Blocco stato locale**: corsia + testo; sopra i 14 giorni si aggiunge l'icona
+      `AlertTriangle`, così l'allarme non è affidato alla sola tinta.
+- [ ] **Esercizio selezionato nella libreria a due pannelli**: fondo **+ corsia 3px** +
+      `aria-current="true"` (il solo fondo fa 1.36:1 contro `--card`: invisibile).
+- [ ] **Radio card del questionario selezionata**: bordo 2px + fondo + **icona `Check`** +
+      `aria-checked`.
 
 ### 8.3 Nomi accessibili
 
@@ -1424,6 +2578,18 @@ Elenco verificabile voce per voce. È quello che il `qa-engineer` spunterà.
 | Disco nell'SVG | l'SVG è un solo `role="img"` con `aria-label` completa; i singoli dischi rimovibili sono `button` con `"Rimuovi un disco da 20 chili"` |
 | Icone decorative accanto a testo visibile | `aria-hidden="true"` — sempre |
 | Pulsante icona senza testo | **non esiste** senza `aria-label`. Nessuna eccezione. |
+| **v2** — wordmark della sidebar | `"Lifted, vai alla home"` |
+| **v2** — ricerca globale | `"Cerca esercizi o routine"` + `role="combobox"` |
+| **v2** — esporta dal blocco stato locale | `"Esporta un backup adesso"` |
+| **v2** — voce di sidebar attiva | il testo visibile basta; `aria-current="page"` |
+| **v2** — badge sulla voce Trainer | `"Trainer, allenamento previsto oggi"` |
+| **v2** — «Visualizza altri 4 esercizi» | il testo visibile basta; `aria-expanded` sul pulsante |
+| **v2** — menu ⋮ di una card del feed | `"Azioni per Schiena+Dorso del 22 settembre"` |
+| **v2** — cella del calendario | `"12 settembre 2026, 1 allenamento: Schiena+Dorso"` · `"13 settembre 2026, nessun allenamento"` |
+| **v2** — mese precedente / successivo | `"Mese precedente, agosto 2026"` / `"Mese successivo, ottobre 2026"` |
+| **v2** — riga del perché | `"Perché 82,5 kg su Panca piana"` |
+| **v2** — barra del questionario | `role="progressbar"` + `aria-valuetext="Passo 3 di 6"` |
+| **v2** — «Vai all'elenco esercizi» / «Torna all'elenco» | il testo visibile basta; sono `<a href="#elenco-esercizi">` reali |
 
 ### 8.4 Ordine di focus in sessione
 
@@ -1472,6 +2638,13 @@ Deterministico, e coincide con la lettura visiva:
 | Import concluso | `#sr-system` | `polite` | "Importati 412 allenamenti e 96 misurazioni." |
 | Errore di salvataggio | `#sr-system` | **`assertive`** | "Allenamento non salvato sul dispositivo." |
 | Filtri applicati | `#sr-system` | `polite` | "37 esercizi trovati." |
+| **v2** — risultati della ricerca globale | `#sr-system` | `polite` | "7 risultati." — debounce 500ms, **mai per tasto** |
+| **v2** — dettaglio esercizio aperto (due pannelli) | `#sr-system` | `polite` | "Panca piana con bilanciere, dettaglio aperto." |
+| **v2** — cambio mese del calendario | `#sr-system` | `polite` | "settembre 2026, 8 allenamenti." — **una volta sola**, non a ogni cella attraversata con le frecce |
+| **v2** — passo del questionario | `#sr-system` | `polite` | "Passo 4 di 6: da quanto ti alleni?" |
+| **v2** — programma generato | `#sr-system` | `polite` | "Programma creato: ipertrofia, 4 giorni, 8 settimane." |
+| **v2** — decisioni di progressione dopo il `TERMINA` | `#sr-session` | `polite` | "Aggiornati 5 carichi per la prossima volta." — **un solo annuncio**, non uno per esercizio |
+| **v2** — errore di lettura del programma | `#sr-system` | **`assertive`** | "Non riesco a leggere il programma." |
 
 **Il conto alla rovescia NON si annuncia secondo per secondo.** `role="timer"` con
 `aria-live="off"`: si annunciano solo avvio, 10 secondi e fine. Un annuncio al secondo
@@ -1498,6 +2671,16 @@ volo): `#sr-session`, `#sr-timer`, `#sr-pr`, `#sr-system`.
 | Grafici Recharts | animazione di ingresso | `isAnimationActive={false}` |
 | Skeleton shimmer | `opacity 0.5→1` 1.2s ∞ | blocco statico `--card-elevated` |
 | Spinner dei bottoni | rotazione 800ms | tre punti in dissolvenza 1s |
+| **v2** — cambio mese del calendario | `translateX(±8px)` + `opacity` 200ms | solo `opacity` 150ms |
+| **v2** — passo del questionario | `translateX(±12px)` + `opacity` 200ms | solo `opacity` 150ms |
+| **v2** — barra del questionario | `scaleX` 200ms | nessuna transizione: salta al valore |
+| **v2** — cambio dettaglio nella libreria | crossfade `opacity` 150ms | cambio immediato |
+| **v2** — espansione della card feed | **nessuna animazione di altezza**, mai; righe nuove in `opacity` 150ms | nessuna dissolvenza |
+| **v2** — voce di sidebar, hover | `background-color` 150ms (proprietà elencata, mai `all`) | invariata: è un colore, non un movimento |
+
+> Il fondo di una voce in hover è l'unica transizione del sistema che non sia `transform` o
+> `opacity`. È ammessa perché `background-color` non provoca layout né paint del sottoalbero,
+> ed è elencata esplicitamente nella `transition` (mai `transition: all`, §11.6).
 
 Implementazione: un `@media (prefers-reduced-motion: reduce)` globale che azzera
 `--dur-1/2/3` **non basta** (le animazioni infinite vanno rimosse, non accorciate). Serve
@@ -1528,15 +2711,114 @@ sia il reset globale sia i casi elencati gestiti nei componenti.
 - [ ] `inputMode` corretto su ogni campo numerico (`decimal` per i kg, `numeric` per le reps).
 - [ ] Nessuna autenticazione in questa app → WCAG 3.3.8 non applicabile, e va detto.
 
-### 8.9 Struttura e semantica
+### 8.9 Struttura e semantica — **rafforzata in v2 (chiude QA GRAVE 5 e MINORE 6)**
 
-- [ ] Un solo `<h1>` per pagina; gerarchia senza salti.
+- [ ] **Ogni rotta dell'app monta esattamente un `<main id="contenuto" tabIndex={-1}>` e
+      esattamente un `<h1>`, dentro quel `<main>`.** Senza eccezioni, e in particolare **fuori
+      dal guscio delle tab**, che è dove il difetto è nato.
+
+| Rotta fuori dal guscio | `<main>` oggi | `<h1>` da adottare |
+|---|---|---|
+| `/sessione` | **manca** | il nome della routine — `Push A`, o `Sessione libera`. Oggi è un `<h2>`: si promuove, e i nomi degli esercizi restano `<h2>` (§4.2), quindi la gerarchia non salta |
+| `/sessione/riepilogo/[id]` | **manca** | `Riepilogo · Push A` |
+| `/impostazioni/*` | c'è, ma il titolo sta **fuori** | il titolo della sezione **dentro** `<main>` (QA MINORE 6: regola axe `region`) |
+| `/trainer/questionario` | nuova | `Il tuo programma` (il testo della domanda è `<h2>`) |
+
+- [ ] **Lo skip link «Vai al contenuto» ha un bersaglio su ogni rotta.** Verifica automatica,
+      una riga per rotta: `document.querySelector('#contenuto')?.tagName === 'MAIN'`, e dopo
+      `Invio` l'elemento attivo è quel `main`. Oggi fallisce su `/sessione` e sul riepilogo.
+- [ ] Gerarchia senza salti su **tutte** le rotte, comprese `/misure`, `/statistiche` e
+      `/misure/[metrica]` (QA MINORE 6: `heading-order`, `h3` senza `h2`).
 - [ ] `<main>`, `<nav aria-label="Navigazione principale">`, `<header>` semantici.
+- [ ] **Un solo `<nav aria-label="Navigazione principale">` nel documento**: sotto 1024 è la
+      bottom nav, sopra è la sidebar. Non devono coesistere, nemmeno nascosta una delle due
+      con `display:none` in un ramo di React che resta montato.
+- [ ] La colonna destra è `<aside aria-label="Riepilogo e azioni rapide">`: è un landmark, così
+      chi usa uno screen reader ci salta invece di tabularci dentro.
 - [ ] La tabella delle serie è una `<table>` reale con `<th scope="col">`, non un grid di `<div>`.
 - [ ] `lang="it"` sull'`<html>`.
-- [ ] Titolo di pagina univoco e descrittivo su ogni rotta (`Sessione · Push A — Lifted`).
+- [ ] Titolo di pagina univoco e descrittivo su ogni rotta (`Sessione · Push A — Lifted`),
+      comprese le rotte nuove (`Trainer · Settimana 3 — Lifted`).
 - [ ] Liste > 50 voci virtualizzate **senza rompere la navigazione da tastiera** (il
-      contenitore espone `aria-rowcount`).
+      contenitore espone `aria-rowcount`). Con ~300 esercizi, la libreria ci rientra
+      abbondantemente.
+
+### 8.10 v2 — il contratto dei componenti nuovi
+
+Elenco a sé perché è quello che il `qa-engineer` non ha mai verificato prima.
+
+**Sidebar (§4.19)**
+- [ ] `<nav aria-label="Navigazione principale">`, voce attiva con `aria-current="page"`.
+- [ ] Voce 48px di altezza e larghezza piena della colonna (≥ `--tap-min`); sotto-voci 40px,
+      eccezione dichiarata e giustificata in §4.19.2.
+- [ ] Anello di focus con `outline-offset: -2px`: non esce dalla sidebar e non viene tagliato.
+- [ ] La sidebar **non è un focus trap**; l'ordine è skip link → sidebar → `main` → `aside`.
+- [ ] Il piede della sidebar non copre mai la lista: `margin-top: auto`, non `position: absolute`.
+- [ ] `GlobalSearch`: `role="combobox"` + `aria-expanded` + `aria-controls` +
+      `aria-activedescendant`; `Esc` chiude e restituisce il focus al campo; l'annuncio dei
+      risultati è `polite` con debounce 500ms, **mai per tasto**.
+- [ ] Il pulsante icona del blocco stato locale ha `aria-label="Esporta un backup adesso"`.
+
+**Colonna destra (§4.20)**
+- [ ] Nessuna informazione esiste **solo** nella colonna destra: sotto 1280 ogni card ha una
+      collocazione dichiarata. Verifica: a 1279px nessun dato è scomparso rispetto a 1280px.
+- [ ] `position: sticky` non copre mai un elemento che ha il focus (`focus-not-obscured`):
+      l'aside ha uno scroll proprio e non si sovrappone al `main`.
+
+**Calendario (§4.27)**
+- [ ] `role="grid"`, `aria-labelledby` sul mese, `<th scope="col">` con il giorno per esteso
+      in `sr-only`.
+- [ ] Roving tabindex: **una sola** cella nel tab order.
+- [ ] `←→↑↓`, `Home`/`End`, `PagSu`/`PagGiù` implementati; uscire dal mese con le frecce lo cambia.
+- [ ] Etichetta di cella completa e parlata: `"12 settembre 2026, 1 allenamento: Schiena+Dorso"`.
+- [ ] Il cambio mese si annuncia **una volta** in `#sr-system`, non a ogni cella attraversata.
+- [ ] Area di cella ≥ 44×44 anche a 375px (misurata, non stimata: 45,5px).
+- [ ] Giorni fuori dal mese `aria-hidden` e non focalizzabili.
+- [ ] Reduced motion: nessuna traslazione al cambio mese.
+
+**Libreria a due pannelli (§4.26)**
+- [ ] Il link «Vai all'elenco esercizi» è il **primo** elemento focalizzabile della colonna
+      centrale, e «Torna all'elenco» chiude il pannello dettaglio.
+- [ ] Alla selezione il focus va sull'`<h1>` del dettaglio (`tabIndex={-1}`) e `#sr-system`
+      annuncia l'apertura.
+- [ ] La voce selezionata porta `aria-current="true"` **e** la corsia (il solo fondo fa 1.36:1).
+- [ ] Le righe fuori dal viewport virtuale non sono nel tab order; `aria-rowcount` esposto.
+- [ ] I due `<select>` nativi sono forzati con `background-color: var(--input); color:
+      var(--text-primary)` (§11.2: su Windows in tema scuro rendono bianco su bianco).
+- [ ] Il contatore dei risultati è `aria-live="polite"` con debounce, e i filtri stanno nella
+      query string.
+
+**Trainer (§4.23-§4.25)**
+- [ ] Il questionario è un `<form>` con un `<fieldset>`+`<legend>` per domanda; radio e
+      checkbox **nativi**, `<label>` che avvolge il controllo.
+- [ ] `role="progressbar"` con `aria-valuenow`/`min`/`max` e `aria-valuetext="Passo 3 di 6"`.
+- [ ] Il primario resta **abilitato** con la domanda senza risposta (§11.8): si preme, l'errore
+      compare sotto la domanda con `aria-invalid` + `aria-describedby`, e il focus va lì.
+- [ ] Il banner «settimana saltata» è `role="status"` (polite e persistente), **non**
+      `role="alert"`: non è un'emergenza e non deve interrompere.
+- [ ] La riga del perché è **testo visibile**, non un `title` né un tooltip: nessuna
+      affordance solo-hover (§4.14).
+- [ ] Il foglio «Perché questo carico» si apre da un `<button>` con nome accessibile
+      («Perché 82,5 kg su Panca piana») e si chiude con `Esc`.
+- [ ] Le sessioni citate nelle prove sono link reali, verificabili.
+- [ ] Ogni riga del perché contiene la frase del **prossimo passo**: senza, il registro
+      racconta il passato e non serve al futuro.
+- [ ] Reduced motion: nessuna traslazione fra i passi del questionario, la barra di
+      avanzamento cambia senza transizione.
+
+**Feed (§4.21)**
+- [ ] «Visualizza altri N esercizi» è un `<button>` con `aria-expanded`, non un link.
+- [ ] L'espansione **non anima l'altezza**: solo `opacity` sulle righe nuove.
+- [ ] `Carica altri 10` è un pulsante reale: niente scroll infinito.
+- [ ] Il menu ⋮ ha un nome accessibile che include l'allenamento e la data.
+
+**Grafici (§4.10-bis)**
+- [ ] `TrendChart` ha un `domain` esplicito su **tutti e tre** i punti d'uso
+      (`/misure/[metrica]`, `/esercizi/[id]`, `/statistiche`).
+- [ ] `VolumeBars` **non** cambia: resta ancorato a zero.
+- [ ] Quando l'asse non parte da zero, la riga `Scala: min – max` è presente.
+- [ ] Escursione zero → dominio simmetrico + frase «Nessuna variazione nel periodo.».
+- [ ] La `<table>` alternativa resta e contiene i valori, non il dominio.
 
 ---
 
@@ -1614,6 +2896,178 @@ type PlateKg = 20 | 15 | 10 | 5 | 2.5 | 1.25;
   lo stato visivo resta e compare il banner d'errore persistente (§4.3) — non si fa
   rollback visivo di una serie che l'utente ha fatto davvero.
 
+### 9.4 v2 — la libreria allargata (~250-300 voci)
+
+Fonte: `docs/esercizi-hevy.md`. **Ogni combinazione movimento × attrezzo è un esercizio
+distinto**, come nel riferimento: `Panca piana (Bilanciere)`, `Panca piana (Manubri)`,
+`Panca piana (Smith)`, `Panca piana (Macchina)` sono quattro voci, non una con un'opzione.
+
+**Convenzione di nome, vincolante**: `Nome del movimento (Attrezzo)`. Con una qualifica di
+presa o di angolo, la qualifica sta **prima** della parentesi:
+`Lat pulldown presa inversa (Cavi)`. Maiuscola solo sulla prima parola (§11.10).
+
+**Campi nuovi su `Exercise`:**
+
+```ts
+type Equipment =                    // da 6 a 15 — ampliata, non sostituita
+  | "barbell" | "ez-bar" | "dumbbell" | "cable" | "machine" | "smith"
+  | "bodyweight" | "weighted" | "assisted-machine" | "kettlebell"
+  | "band" | "trap-bar" | "medicine-ball" | "plate" | "other";
+
+type MuscleGroup =                  // da 6 a 8: i gruppi della spec-v2
+  | "chest" | "back" | "shoulders" | "arms" | "legs" | "core"
+  | "traps" | "fullbody";
+
+interface Exercise {
+  // … tutti i campi di §9.1, invariati …
+  family: string;          // "panca-piana" — raggruppa le varianti; è il raggruppamento
+                           //   della libreria quando c'è un filtro muscolo attivo (§4.26)
+  variant?: string;        // "presa inversa" | "presa neutra" | "30 gradi"
+  mechanics: "compound" | "isolation";
+  unilateral: boolean;     // un braccio/una gamba: il volume si conta per lato
+  loadMode: "external" | "bodyweight" | "weighted-bodyweight" | "assisted";
+  stepKgOverride?: number; // incremento minimo dell'attrezzo (macchina a tacche da 5)
+  popularity: number;      // ordine di default nella libreria: prima quelli che si usano
+  videoUrl?: string | null;// PREVISTO DALLO SCHEMA, MAI MOSTRATO IN V2 (spec-v2 §4).
+                           //   Nessuna schermata deve promettere un video che non c'è.
+}
+```
+
+**Vincoli di migrazione — nessun dato dell'utente si tocca:**
+
+| Regola | Perché |
+|---|---|
+| `nameKey` deve includere **l'attrezzo** | senza, `Panca piana (Bilanciere)` e `(Manubri)` collidono sull'indice unico `&nameKey` e il seed ne perde una |
+| Il seed riconosce le voci esistenti per **`family` + `equipment`**, non per nome | gli 81 esercizi di v1 hanno nomi italiani estesi («Panca piana con bilanciere»): si **aggiornano** con i campi nuovi, non si duplicano |
+| Gli esercizi con `isCustom: true` **non si toccano mai** | spec-v2 §3. Nemmeno per aggiungere `family`: resta vuoto e la libreria li raggruppa sotto «Personalizzati» |
+| Lo storico non si riscrive | `SessionExercise.exerciseName` è già denormalizzato (§9.3): rinominare o riclassificare un esercizio non tocca le sessioni passate |
+| Il seed è **idempotente** e versionato in `AppMeta` | una libreria che si ri-semina due volte è una libreria doppia |
+
+**Conseguenza sulla UI**: con ~300 voci, la virtualizzazione della libreria smette di essere
+una raccomandazione e diventa un requisito (§4.26, §11.6). E il contatore dei risultati smette
+di essere un dettaglio: con 287 voci, «quante ne ho filtrate» è l'unico modo per sapere se il
+filtro ha fatto qualcosa.
+
+### 9.5 v2 — il modello del Trainer
+
+Quattro entità nuove. La quarta — `ProgressionDecision` — è quella che rende il Trainer
+trasparente: **senza una tabella delle decisioni, il «perché» andrebbe ricalcolato a ogni
+render e cambierebbe quando cambiano i dati**. È lo stesso motivo per cui `PersonalRecord` è
+una tabella e non un calcolo (§9.3): la storia deve restare quella che è stata.
+
+```ts
+type TrainerGoal  = "strength" | "hypertrophy" | "recomp" | "maintenance";
+type TrainerLevel = "beginner" | "intermediate" | "advanced";
+type ProgressionRule =
+  | "double-progression" | "reps-first" | "rpe-cap" | "hold-on-miss"
+  | "deload-on-miss" | "planned-deload" | "skip-hold" | "first-time" | "manual";
+
+interface TrainerProfile {          // le risposte al questionario — singleton
+  id: "singleton";
+  goal: TrainerGoal;
+  priorityMuscles: MuscleGroup[];   // massimo 2, può essere vuoto
+  equipment: Equipment[];           // almeno uno
+  level: TrainerLevel;
+  daysPerWeek: 2 | 3 | 4 | 5 | 6;
+  sessionMinutes: 45 | 60 | 75 | 90;
+  answeredAt?: ISODate;
+  draftStep?: 1|2|3|4|5|6;          // questionario a metà: si riprende da qui
+}
+
+interface TrainerProgram {
+  id: ID;
+  name: string;                     // "Ipertrofia · 4 giorni · 8 settimane"
+  profileSnapshot: TrainerProfile;  // le risposte AL MOMENTO della generazione:
+                                    //   cambiare le risposte non riscrive il passato
+  goal: TrainerGoal;
+  weeksTotal: number;
+  currentWeek: number;
+  status: "active" | "paused" | "completed" | "abandoned";
+  createdAt: ISODate; startedAt: ISODate;
+  pausedAt?: ISODate; completedAt?: ISODate;
+  ruleSetVersion: number;           // quale set di regole (§4.25) ha generato il programma
+  weeks: TrainerWeek[];
+}
+
+interface TrainerWeek {
+  index: number;                              // 1-based
+  kind: "accumulo" | "intensificazione" | "scarico";
+  status: "futura" | "in-corso" | "completata" | "saltata" | "ripetuta";
+  days: TrainerDay[];
+}
+
+interface TrainerDay {
+  id: ID;
+  weekIndex: number; dayIndex: number;
+  name: string;                               // "Giorno B · Spinta"
+  targetMuscles: MuscleGroup[];
+  estimatedMinutes: number;
+  status: "prevista" | "completata" | "saltata";
+  plannedFor?: ISODate;                       // la data suggerita, non un obbligo
+  sessionId?: ID;                             // la sessione che l'ha chiuso
+  exercises: TrainerExercise[];
+}
+
+interface TrainerExercise {
+  exerciseId: ID; exerciseName: string;       // denormalizzato, come ovunque
+  order: number;
+  sets: number; repsMin: number; repsMax: number;
+  rpeTarget: number; restSec: number;
+  suggestedWeightKg: number | null;           // null = "prima volta", campo vuoto
+  decisionId?: ID;                            // ⇢ ProgressionDecision: il perché di questo carico
+}
+
+interface ProgressionDecision {               // TABELLA PROPRIA, indicizzata per programId+decidedAt
+  id: ID; programId: ID;
+  weekIndex: number; dayId: ID;
+  exerciseId: ID; exerciseName: string;
+  decidedAt: ISODate;
+  rule: ProgressionRule;
+  direction: "up" | "hold" | "down" | "deload" | "manual";
+  fromWeightKg: number | null; toWeightKg: number | null;
+  fromReps: [number, number] | null; toReps: [number, number] | null;
+  evidence: {                                 // i numeri che hanno attivato la regola
+    sessionIds: ID[];                         // link verificabili nel foglio (§4.25)
+    setsCompleted: number; setsPlanned: number;
+    repsAchieved: number[];
+    rpeObserved: (number | null)[];
+  };
+  humanReason: string;                        // "3 serie su 3 a RPE 7" — la frase mostrata
+  nextStepHint: string;                       // "Completa 3×8 a RPE ≤ 8 e salgo a 85 kg"
+  overriddenBy?: ID;                          // se l'utente ha detto "non sono d'accordo"
+}
+```
+
+**Collegamento con la sessione**: `Session` guadagna **un solo campo**,
+`trainerDayId?: ID`. È quello che permette al giorno di marcarsi da sé al `TERMINA` e alla
+progressione di girare sugli esercizi giusti. Nient'altro della sessione cambia.
+
+**Impostazioni nuove** (in `Settings`, non costanti nel codice):
+`trainerIncrementUpperKg: 2.5` · `trainerIncrementLowerKg: 5` · `trainerIncrementDumbbellKg: 2` ·
+`trainerIncrementMachineKg: 5` · `trainerDeloadEveryWeeks: 4` · `trainerRpeCap: 9.5`.
+
+**Backup — conseguenza da non dimenticare.** Le quattro tabelle nuove entrano nell'export JSON
+e il formato sale a **`formatVersion: 2`**. Oggi l'importatore **rifiuta** un file con
+`formatVersion: 2` come «versione più recente» (verificato dal QA): va insegnato ad accettarlo
+e a migrare un file **v1 → v2** (che semplicemente non ha le tabelle del Trainer → si importa
+con il Trainer vuoto, senza errori). Un backup fatto ieri deve restare importabile domani:
+è l'unica rete di sicurezza di quest'app.
+
+### 9.6 v2 — cosa legge ogni schermata nuova
+
+| Schermata | Legge |
+|---|---|
+| `/home` | `Session[status=active]` · le ultime 10 `Session[status=completed]` (id, nome, data, durata, volume, conteggio PR, i primi 3 `SessionExercise.exerciseName` + conteggio serie) · `TrainerProgram[status=active]` → il giorno di oggi · `Settings.lastExportAt` |
+| `Sidebar` | `Session[status=active]` (per la `SessionBar`) · `Settings.lastExportAt` (per il blocco stato locale) · `TrainerProgram` (per il badge «Oggi») |
+| `GlobalSearch` | `Exercise[]` (id, name, muscleGroup, equipment) · `Routine[]` (id, name) — tutto in memoria, nessuna query per tasto |
+| `/trainer` | `TrainerProgram[status in (active,paused)]` completa · le `Session` collegate ai giorni (per gli stati) · le ultime `ProgressionDecision` del giorno di oggi |
+| `/trainer/giorno/[id]` | il `TrainerDay` + le `ProgressionDecision` referenziate dai suoi esercizi |
+| `/trainer/progressione` | `ProgressionDecision[programId]` ordinate per `decidedAt` desc, paginate a 50 |
+| `/trainer/questionario` | `TrainerProfile` (bozza) · `Exercise[]` (per sapere cosa è generabile con gli attrezzi scelti) |
+| `/profilo` — intestazione | **aggregazione su tutte** le `Session[status=completed]`: conteggio, volume, serie, durata. **Non** sulla lista troncata (QA GRAVE 3) |
+| `/profilo` — calendario | le `Session[status=completed]` del mese in vista (`startedAt` fra il 1° e l'ultimo giorno), raggruppate per giorno locale — **indice su `startedAt`**, non una scansione |
+| `/esercizi` (due pannelli) | `Exercise[]` completa in memoria (~300 voci, trascurabile) · il dettaglio come in v1 |
+
 ---
 
 ## 10. Consegne al `frontend-engineer`
@@ -1668,6 +3122,101 @@ invenzioni.
 7. **Prima di dichiarare "fatto"**: build + typecheck puliti, il flusso della sessione
    percorso davvero su un telefono reale (375px, tastiera aperta, con `prefers-reduced-motion`
    attivo almeno una volta), e i target misurati — non stimati a occhio.
+
+---
+
+## 10-bis. Consegne v2 al `frontend-engineer`
+
+L'app esiste già e funziona. Questo è un **innesto**, non una riscrittura: l'ordine sotto è
+pensato perché a ogni passo l'app resti avviabile.
+
+### Passo 0 — i due difetti del QA che chiudono qui (mezz'ora, fatelo prima di tutto)
+
+1. **QA GRAVE 2** — `domain` su `TrendChart` (`src/components/charts/recharts-impl.tsx:236-243`)
+   secondo §4.10-bis. `VolumeBars` (riga ~319) **non si tocca**. I tre punti d'uso sono
+   `misure/[metrica]/metrica-view.tsx:161`, `esercizi/[id]/dettaglio-view.tsx:173`,
+   `statistiche/statistiche-view.tsx:322`. Aggiungere la riga `Scala: min – max` nel piede e
+   il caso «escursione zero».
+2. **QA GRAVE 5** — `<main id="contenuto" tabIndex={-1}>` + `<h1>` in
+   `src/app/sessione/sessione-view.tsx` e `riepilogo-view.tsx`; il titolo di
+   `/impostazioni*` **dentro** il `<main>` di `src/app/impostazioni/layout.tsx:26`. Vedi la
+   tabella in §8.9.
+
+Sono due difetti che il design system aveva lasciato senza regola: adesso la regola c'è, e
+la verifica è una riga di e2e per rotta.
+
+### Passo 1 — token e guscio
+
+- Aggiungere a `app/globals.css` il blocco `--sidebar-*` / `--rail-right-w` / … di §2.1 e
+  `--breakpoint-3col: 1280px` a `@theme inline`. **Nessun colore nuovo.**
+- **Cancellare il rail da 240px**: `lg:pl-60` in `src/components/layout/app-shell.tsx:17` e
+  tutto il ramo `lg:*` di `src/components/layout/bottom-nav.tsx:38-89`. Non si adatta: si
+  sostituisce con un componente nuovo.
+- Nuovo `AppShell` a due/tre colonne: `padding-left: var(--sidebar-w)` da 1024,
+  `.shell__content` in griglia da 1280 (§7.5). DOM: skip link → `<nav>` → `<main>` → `<aside>`.
+- `<BottomNav>` con le cinque tab nuove (§4.11) e `<Sidebar>` (§4.19) — **mai montate
+  insieme**, nemmeno nascoste (§8.9).
+
+### Passo 2 — le rotte nuove, vuote ma corrette
+
+`/home`, `/trainer`, `/trainer/questionario`, `/trainer/giorno/[id]`,
+`/trainer/progressione`, `/impostazioni/{allenamento,app,dati,info}` (con redirect da
+`/impostazioni/backup`). Ognuna con `<main id="contenuto">`, un `<h1>`, titolo di pagina, e
+lo stato **empty** già implementato: una rotta nuova che mostra una pagina bianca è un
+regresso rispetto a nessuna rotta.
+
+### Passo 3 — componenti, in quest'ordine
+
+`Sidebar` + `LocalStateBlock` (§4.19) → `RightRail` (§4.20) → `WorkoutFeedCard` (§4.21) →
+`/home` (§6.7) → `MonthCalendar` (§4.27) → `ProfileHeader`/`StatsTabs` (§4.22) →
+`SettingsTwoPane` (§4.28) → `ExerciseTwoPane` (§4.26) → `GlobalSearch` (§4.19.3) →
+`TrainerQuestionnaire` (§4.23) → `TrainerDashboard` (§4.24) → `ProgressionReason` (§4.25).
+
+Il Trainer è ultimo di proposito: è l'unico pezzo che ha bisogno di logica nuova, e fino ad
+allora tutto il resto è già verificabile.
+
+### Passo 4 — dati
+
+- `Exercise` allargato (§9.4): `Equipment` da 6 a 15 valori, `MuscleGroup` da 6 a 8,
+  `family`, `variant`, `mechanics`, `unilateral`, `loadMode`, `stepKgOverride`, `popularity`,
+  `videoUrl` (**mai mostrato**). **`nameKey` deve includere l'attrezzo**, o il seed perde voci.
+- Nuovo seed da `docs/esercizi-hevy.md`, ~250-300 voci, **idempotente**, che riconosce le
+  esistenti per `family`+`equipment` e **non tocca mai `isCustom: true`**.
+- Quattro tabelle nuove (§9.5) + `Session.trainerDayId` + le sei impostazioni di incremento.
+- **`formatVersion: 2` nel backup**, con import che accetta sia 1 sia 2 e migra 1→2 senza
+  errori. Oggi un file v2 viene rifiutato: è una regressione che va tolta **nello stesso
+  commit** in cui il formato cambia.
+- Indice su `Session.startedAt` per il calendario (non si scansiona per disegnare un mese).
+
+### Passo 5 — regole che non si negoziano in fase di build (in aggiunta a §10.4)
+
+- **Un solo `<main>` e un solo `<h1>` per rotta**, sempre, anche fuori dal guscio.
+- **Un solo `<nav aria-label="Navigazione principale">`** nel documento.
+- La colonna destra **non** è mai l'unico posto in cui vive un dato: se sparisce a 1279px, è
+  un bug (§4.20, §8.10).
+- La libreria è **virtualizzata** con `estimateSize` costante; il filtro non mostra skeleton.
+- **Nessuna emoji come icona**, in nessun punto: il 🏅 del riferimento diventa `Trophy` + la parola.
+- **Nessun video, nessuna miniatura fotografica.** Il campo `videoUrl` esiste nello schema e
+  non ha una sola riga di UI che lo legga.
+- **Nessuna funzione sociale**: nessun like, commento, follower, condivisione, «atleti
+  suggeriti». Se compare in un mockup, è una svista del riferimento, non un requisito.
+- La riga del perché del Trainer è **testo visibile**, non un tooltip.
+- `ProgressionDecision` si **scrive**, non si ricalcola a ogni render.
+- Il carico consigliato del Trainer entra nei campi come **valore**, non come placeholder:
+  il Trainer propone, e una proposta che l'utente deve ridigitare non è una proposta.
+
+### Passo 6 — fuori scope v2, anche se sembra naturale
+
+Video di esecuzione · qualunque funzione sociale · temi multipli · sincronizzazione ·
+condivisione dell'immagine del riepilogo · import «unisci» · un Trainer che genera in base a
+qualcosa che non siano i dati locali dell'utente · notifiche push · telemetria.
+
+### Passo 7 — prima di dire «fatto»
+
+Oltre a §10.7: il **questionario percorso davvero** dall'inizio alla fine su 375px, un
+allenamento del Trainer registrato e la card «Cosa cambia la prossima volta» letta; il
+calendario navigato **con la sola tastiera**; la libreria con 300 voci scorsa a 1440 e a 375;
+e `axe` ripassato sulle rotte nuove **e** su `/sessione`, che finalmente deve dare zero.
 
 ---
 

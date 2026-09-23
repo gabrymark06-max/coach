@@ -16,7 +16,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { formatKgValue } from "@/lib/format";
 import { useReducedMotion } from "@/lib/hooks/use-reduced-motion";
+import { levelDomain } from "@/lib/logic/chart-domain";
 import { cn } from "@/lib/utils";
 import { SeriesGlyph, type DotShape, type SeriesDef } from "./chart-card";
 
@@ -183,6 +185,14 @@ export interface TrendChartProps {
   formatValue: (value: number, series: SeriesDef) => string;
   yUnit?: string;
   ariaLabel: string;
+  /**
+   * §4.10-bis. `"level"` = grandezza di livello (peso, 1RM, circonferenza): l'asse
+   * parte dal minimo e il piede dichiara la scala. `"zero"` = grandezza cumulativa.
+   * Non ha default di comodo: chi monta un grafico deve rispondere alla domanda.
+   */
+  domainMode: "level" | "zero";
+  /** incremento sotto il quale la grandezza non si misura: 0,5 kg / 0,5 % / 0,5 cm */
+  unitStep?: number;
 }
 
 export function TrendChart({
@@ -193,6 +203,8 @@ export function TrendChart({
   formatTooltipLabel,
   formatValue,
   yUnit,
+  domainMode,
+  unitStep = 0.5,
   ariaLabel,
 }: TrendChartProps) {
   const reduced = useReducedMotion();
@@ -207,7 +219,27 @@ export function TrendChart({
     });
   }, []);
 
-  const visible = series.filter((one) => !hidden.has(one.key));
+  const visible = React.useMemo(
+    () => series.filter((one) => !hidden.has(one.key)),
+    [series, hidden],
+  );
+
+  /**
+   * §4.10-bis. Il dominio si calcola **sulle sole serie visibili**: nascondere una
+   * curva dalla legenda deve riscalare l'asse, altrimenti resta il vuoto lasciato da
+   * un dato che non c'e' piu'.
+   */
+  const domain = React.useMemo(() => {
+    if (domainMode === "zero") return null;
+    const values: number[] = [];
+    for (const row of data) {
+      for (const one of visible) {
+        const value = row[one.key];
+        if (typeof value === "number") values.push(value);
+      }
+    }
+    return levelDomain(values, unitStep);
+  }, [data, domainMode, unitStep, visible]);
 
   return (
     <div>
@@ -237,8 +269,13 @@ export function TrendChart({
             tick={AXIS_TICK}
             stroke="var(--border)"
             width={56}
+            domain={domain ? [domain.min, domain.max] : [0, "auto"]}
+            tickCount={domain ? domain.tickCount : undefined}
+            allowDecimals={domain ? domain.step < 1 : true}
             tickFormatter={(value: number, index: number) =>
-              index === 0 && yUnit ? `${value} ${yUnit}` : String(value)
+              index === 0 && yUnit
+                ? `${formatKgValue(value)} ${yUnit}`
+                : formatKgValue(value)
             }
           />
           <Tooltip
@@ -267,6 +304,27 @@ export function TrendChart({
           ))}
         </LineChart>
       </ResponsiveContainer>
+
+      {/*
+        §4.10-bis — la dichiarazione obbligatoria. Quando l'asse non parte da zero il
+        lettore ha perso il riferimento piu' forte che aveva, e la riga glielo ridà in
+        numeri. Sui grafici ancorati a zero non compare: sarebbe rumore, lo zero e' li'.
+      */}
+      {domain ? (
+        <p className="mt-3 text-sm text-[var(--text-muted)]">
+          {domain.flat ? (
+            "Nessuna variazione nel periodo."
+          ) : (
+            <>
+              Scala:{" "}
+              <span className="tnum">
+                {formatKgValue(domain.min)} – {formatKgValue(domain.max)}
+              </span>
+              {yUnit ? ` ${yUnit}` : null}
+            </>
+          )}
+        </p>
+      ) : null}
     </div>
   );
 }

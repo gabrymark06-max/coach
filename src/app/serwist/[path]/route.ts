@@ -25,6 +25,8 @@ const REVISION = `${APP_VERSION}-${Date.now().toString(36)}`;
 
 const PAGES = [
   "/",
+  "/home",
+  "/trainer",
   "/allenamento",
   "/allenamento/routine/nuova",
   "/allenamento/routine/_",
@@ -41,7 +43,9 @@ const PAGES = [
   "/sessione",
   "/sessione/riepilogo/_",
   "/impostazioni",
-  "/impostazioni/backup",
+  "/impostazioni/allenamento",
+  "/impostazioni/app",
+  "/impostazioni/dati",
   "/impostazioni/info",
   "/manifest.webmanifest",
 ];

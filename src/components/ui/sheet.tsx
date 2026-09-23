@@ -44,6 +44,15 @@ export const SheetContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         data-sheet=""
+        /**
+         * QA MINORE 7. Senza `description` veniva renderizzata una `Description`
+         * `sr-only` con **lo stesso testo del titolo**, e all'apertura lo screen reader
+         * leggeva «I tuoi dati restano su questo telefono — I tuoi dati restano su
+         * questo telefono». Qui si dice a Radix che la descrizione non c'e', invece di
+         * inventarne una fantasma per zittire il suo avviso. Con una `description`
+         * vera, invece, si lascia fare a Radix: e' lui che conosce l'id.
+         */
+        {...(description ? null : { "aria-describedby": undefined })}
         className={cn(
           "fixed z-[var(--z-dialog)] flex flex-col",
           "bg-[var(--popover)] text-[var(--popover-foreground)] shadow-[var(--elev-2)]",
@@ -74,11 +83,7 @@ export const SheetContent = React.forwardRef<
               <DialogPrimitive.Description className="mt-1 text-sm text-[var(--text-secondary)]">
                 {description}
               </DialogPrimitive.Description>
-            ) : (
-              <DialogPrimitive.Description className="sr-only">
-                {title}
-              </DialogPrimitive.Description>
-            )}
+            ) : null}
           </div>
           {hideClose ? null : (
           <DialogPrimitive.Close

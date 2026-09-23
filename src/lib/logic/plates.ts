@@ -1,5 +1,12 @@
 import { PLATE_KGS, type PlateKg } from "@/lib/db/schema";
 
+/**
+ * Dischi disponibili **per lato** — e' questo il budget che la DP consuma.
+ *
+ * Non e' quello che l'utente scrive in Impostazioni: li' si dichiara il totale
+ * («Quanti ne hai in tutto, non per lato»). La conversione, e il diviso due che ci
+ * vuole, stanno in `toPlateInventory` e in nessun altro posto.
+ */
 export type PlateInventory = Record<PlateKg, number>;
 
 export interface PlateCount {
@@ -139,11 +146,18 @@ export function solvePlates(
   return { ...base, status: "inexact", best, below, above };
 }
 
-/** Converte l'inventario salvato in `Settings` (chiavi stringa) nella forma di calcolo. */
+/**
+ * Converte l'inventario salvato in `Settings` (totale, chiavi stringa) nel budget
+ * **per lato** che il calcolo consuma.
+ *
+ * Il diviso due sta qui, una volta sola. Un bilanciere si carica simmetrico: un disco
+ * spaiato non si usa, quindi si arrotonda per difetto. Dieci dischi da 20 dichiarati
+ * valgono cinque coppie; nove ne valgono comunque quattro.
+ */
 export function toPlateInventory(raw: Record<string, number>): PlateInventory {
   const inventory = {} as PlateInventory;
   for (const kg of PLATE_KGS) {
-    inventory[kg] = clampCount(raw[String(kg)]);
+    inventory[kg] = Math.floor(clampCount(raw[String(kg)]) / 2);
   }
   return inventory;
 }
