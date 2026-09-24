@@ -298,8 +298,18 @@ export function ExercisePaneList({
             §8.9 chiede comunque di esporre il numero totale su una lista virtualizzata:
             lo fanno `aria-setsize` e `aria-posinset`, che su `listitem` sono legittimi.
             Senza, uno screen reader annuncerebbe «1 di 13» in mezzo a 269 esercizi.
+
+            §8.10 chiede l'attributo `aria-rowcount`, ma quello vive **solo** su
+            `grid`/`table`/`treegrid`: metterlo su una lista di link e' un attributo non
+            consentito, e axe lo segnala (`aria-allowed-attr`). Il totale si espone qui
+            in due modi validi: `aria-setsize` su ogni voce e il conteggio dentro il
+            nome della lista, che uno screen reader legge entrandoci.
           */}
-          <ul aria-label="Esercizi" className="relative" style={{ height: virtualizer.getTotalSize() }}>
+          <ul
+            aria-label={`Esercizi, ${exercises.length} in tutto`}
+            className="relative"
+            style={{ height: virtualizer.getTotalSize() }}
+          >
             {virtualizer.getVirtualItems().map((item) => {
               const riga = righe[item.index];
               const posInSet = riga.kind === "row" ? posizione.get(riga.key) : undefined;

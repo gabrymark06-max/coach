@@ -268,7 +268,12 @@ export function ProfiloView() {
 
       {mostraCalendario && hasRail ? (
         <RightRail>
-          <RailCard title="Calendario">
+          {/*
+            `bleed`: senza, i 16px di imbottitura della card lasciano 288px ai sette
+            giorni e la cella scende a 37px. Ai bordi della card ne restano 320 e la
+            cella torna sopra i 40px del cerchio (§4.27, QA DIFETTO 7).
+          */}
+          <RailCard title="Calendario" bleed>
             <MonthCalendar month={mese} onMonthChange={setMese} />
           </RailCard>
         </RightRail>

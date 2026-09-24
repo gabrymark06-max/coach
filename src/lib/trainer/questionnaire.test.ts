@@ -5,7 +5,6 @@ import {
   MAX_PRIORITY_MUSCLES,
   describeEquipment,
   firstIncompleteStep,
-  splitPreview,
   summaryRows,
   toProfile,
   validateStep,
@@ -81,23 +80,22 @@ describe("i preset coprono le caselle vere", () => {
 
 describe("il riepilogo del passo 6", () => {
   it("mostra ogni risposta con il passo a cui tornare", () => {
-    const rows = summaryRows(COMPLETA);
+    const rows = summaryRows(COMPLETA, "Upper/Lower ×2");
     expect(rows.map((row) => row.step)).toEqual([1, 2, 3, 4, 5]);
     expect(rows[1].value).toBe("Petto");
     expect(rows[4].value).toContain("Upper/Lower ×2");
   });
 
   it("dice «Nessuna preferenza» invece di lasciare il campo vuoto", () => {
-    expect(summaryRows({ ...COMPLETA, priorityMuscles: [] })[1].value).toBe(
+    expect(summaryRows({ ...COMPLETA, priorityMuscles: [] }, "Upper/Lower ×2")[1].value).toBe(
       "Nessuna preferenza",
     );
   });
 });
 
-describe("splitPreview — al passo 5 si vede già che settimana esce", () => {
-  it("dice lo split prima di generare", () => {
-    expect(splitPreview(4, "intermediate")).toBe("Upper/Lower ×2");
-    expect(splitPreview(3, "beginner")).toBe("Full body ×3");
-    expect(splitPreview(3, "advanced")).toBe("Push/Pull/Legs");
+describe("il riepilogo non inventa lo split", () => {
+  it("senza uno split risolto non ne nomina nessuno", () => {
+    const row = summaryRows(COMPLETA, null)[4];
+    expect(row.value).toBe("4 giorni da 60 minuti");
   });
 });

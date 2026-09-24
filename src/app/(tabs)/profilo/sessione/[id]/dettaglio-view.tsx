@@ -52,22 +52,29 @@ export function DettaglioSessioneView() {
     <Async
       state={state}
       loading={
-        <div className="app-container pt-9">
-          <ListSkeleton rows={3} height={96} />
-        </div>
+        <>
+          {/* §8.9: un `<h1>` per rotta **in ogni stato**, come fa `/trainer/giorno/[id]` */}
+          <PageHeader title="Allenamento" />
+          <div className="app-container">
+            <ListSkeleton rows={3} height={96} />
+          </div>
+        </>
       }
       isEmpty={(data) => data === null}
       empty={
-        <EmptyState
-          icon={History}
-          title="Allenamento non trovato"
-          line="Questo allenamento non esiste più su questo dispositivo."
-          action={
-            <Button block asChild>
-              <Link href="/profilo">Torna allo storico</Link>
-            </Button>
-          }
-        />
+        <>
+          <PageHeader title="Allenamento" />
+          <EmptyState
+            icon={History}
+            title="Allenamento non trovato"
+            line="Questo allenamento non esiste più su questo dispositivo."
+            action={
+              <Button block asChild>
+                <Link href="/profilo">Torna allo storico</Link>
+              </Button>
+            }
+          />
+        </>
       }
       errorDetail="Non riesco a leggere questo allenamento su questo dispositivo."
     >

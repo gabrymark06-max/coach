@@ -92,22 +92,29 @@ export function DettaglioEsercizioView() {
     <Async
       state={state}
       loading={
-        <div className="app-container pt-9">
-          <ListSkeleton rows={3} height={72} />
-        </div>
+        <>
+          {/* §8.9: un `<h1>` per rotta **in ogni stato**, come fa `/trainer/giorno/[id]` */}
+          <PageHeader title="Esercizio" />
+          <div className="app-container">
+            <ListSkeleton rows={3} height={72} />
+          </div>
+        </>
       }
       isEmpty={(exercise) => exercise === undefined}
       empty={
-        <EmptyState
-          icon={Dumbbell}
-          title="Esercizio non trovato"
-          line="Questo esercizio non esiste più su questo dispositivo."
-          action={
-            <Button block asChild>
-              <Link href="/esercizi">Torna alla libreria</Link>
-            </Button>
-          }
-        />
+        <>
+          <PageHeader title="Esercizio" />
+          <EmptyState
+            icon={Dumbbell}
+            title="Esercizio non trovato"
+            line="Questo esercizio non esiste più su questo dispositivo."
+            action={
+              <Button block asChild>
+                <Link href="/esercizi">Torna alla libreria</Link>
+              </Button>
+            }
+          />
+        </>
       }
     >
       {(exercise) =>

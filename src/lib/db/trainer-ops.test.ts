@@ -5,16 +5,20 @@ import type { Draft } from "@/lib/trainer/questionnaire";
 import { createBackup, restoreBackup } from "./backup-ops";
 import { createTestDb, type LiftedDB } from "./db";
 import { finishSession, startSession, updateActiveSession } from "./mutations";
+import { getActiveSession } from "./queries";
 import { ensureSeeded } from "./seed";
-import { patchSet, toggleSetCompleted } from "./session-ops";
+import { addExercise, patchSet, toggleSetCompleted } from "./session-ops";
 import {
   advanceWeek,
   createProgramFromDraft,
   getCurrentProgram,
   listDecisions,
   overrideWeight,
+  reduceDays,
+  regenerateFromToday,
   saveDraft,
   getTrainerProfile,
+  todayTrainerDay,
 } from "./trainer-ops";
 import type { TrainerProgram } from "./trainer-schema";
 
@@ -309,5 +313,184 @@ describe("il backup porta con sé il Trainer", () => {
     expect(await db.trainerPrograms.count()).toBe(0);
     expect(await db.trainerDays.count()).toBe(0);
     expect(await getCurrentProgram(db)).toBeUndefined();
+  });
+});
+
+/*
+  Il bloccante del secondo audit del QA: **con uno storico di allenamenti il programma
+  non si generava piu'**. La suite lo aveva mancato perche' generava sempre da un
+  database vuoto, che e' l'unico caso in cui il bug non si vede.
+
+  Qui si allena **prima** e si genera **dopo**, nelle quattro configurazioni misurate
+  dal QA: niente storico, uno storico su un esercizio che entra in settimana 1, uno
+  storico su un esercizio che non entra, uno storico grande.
+*/
+describe("generare un programma quando lo storico esiste gia'", () => {
+  /** Una sessione libera completata sugli esercizi indicati. */
+  async function allenaLibero(exerciseIds: readonly string[], weightKg = 80, reps = 8) {
+    await startSession(db);
+    for (const id of exerciseIds) {
+      const row = await db.exercises.get(id);
+      if (!row) throw new Error(`esercizio assente dalla libreria: ${id}`);
+      await updateActiveSession(db, (current) =>
+        addExercise(current, {
+          exerciseId: row.id,
+          exerciseName: row.name,
+          equipment: row.equipment,
+          restSec: 120,
+          sets: [{ type: "normal" }, { type: "normal" }, { type: "normal" }],
+        }),
+      );
+    }
+    const active = await getActiveSession(db);
+    if (!active) throw new Error("nessuna sessione attiva");
+    for (const exercise of active.exercises) {
+      for (const set of exercise.sets) {
+        await updateActiveSession(db, (current) =>
+          toggleSetCompleted(
+            patchSet(current, exercise.id, set.id, { weightKg, reps }),
+            exercise.id,
+            set.id,
+            true,
+            new Date().toISOString(),
+          ),
+        );
+      }
+    }
+    return finishSession(db);
+  }
+
+  /** Gli esercizi che il generatore mette davvero in settimana 1, su database vuoto. */
+  async function esercizDiSettimana1(): Promise<string[]> {
+    const program = await genera();
+    const ids = [
+      ...new Set(program.weeks[0].days.flatMap((day) => day.exercises.map((e) => e.exerciseId))),
+    ];
+    await db.trainerPrograms.clear();
+    await db.trainerDays.clear();
+    await db.trainerDecisions.clear();
+    return ids;
+  }
+
+  it("genera con UNA sessione su un esercizio che entra in settimana 1", async () => {
+    const [primo] = await esercizDiSettimana1();
+    await allenaLibero([primo], 80, 8);
+
+    const result = await createProgramFromDraft(db, RISPOSTE);
+    expect(result.ok, result.ok ? "" : result.reason).toBe(true);
+
+    const program = await getCurrentProgram(db);
+    expect(program).toBeTruthy();
+    const slot = program!.weeks[0].days
+      .flatMap((day) => day.exercises)
+      .find((exercise) => exercise.exerciseId === primo);
+    expect(slot?.suggestedWeightKg).toBe(80);
+
+    // la decisione della prima settimana esiste, e dice da dove viene quel carico
+    const { rows } = await listDecisions(db, program!.id);
+    const decision = rows.find((row) => row.exerciseId === primo);
+    expect(decision?.rule).toBe("carry-over");
+    expect(decision?.toWeightKg).toBe(80);
+    expect(decision?.nextStepHint.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it("genera con una sessione su un esercizio che nel programma non entra", async () => {
+    const dentro = new Set(await esercizDiSettimana1());
+    const tutti = await db.exercises.toArray();
+    const fuori = tutti.find((row) => !dentro.has(row.id) && !row.archivedAt);
+    await allenaLibero([fuori!.id], 6, 15);
+    const result = await createProgramFromDraft(db, RISPOSTE);
+    expect(result.ok, result.ok ? "" : result.reason).toBe(true);
+  });
+
+  it("genera con uno storico su tutti gli esercizi della prima settimana", async () => {
+    const ids = await esercizDiSettimana1();
+    for (const id of ids) await allenaLibero([id], 40, 8);
+
+    const result = await createProgramFromDraft(db, RISPOSTE);
+    expect(result.ok, result.ok ? "" : result.reason).toBe(true);
+
+    const program = await getCurrentProgram(db);
+    const { rows } = await listDecisions(db, program!.id);
+    // una decisione per ogni esercizio della settimana 1, nessuna esclusa
+    const attesi = program!.weeks[0].days.flatMap((day) => day.exercises).length;
+    expect(rows.length).toBe(attesi);
+    for (const row of rows) expect(row.nextStepHint.trim()).not.toBe("");
+  });
+
+  it("«Rigenera da qui» e «Riduci a 3 giorni» funzionano con lo storico", async () => {
+    const ids = await esercizDiSettimana1();
+    for (const id of ids) await allenaLibero([id], 40, 8);
+    await createProgramFromDraft(db, RISPOSTE);
+
+    const rigenerato = await regenerateFromToday(db);
+    expect(rigenerato.ok, rigenerato.ok ? "" : rigenerato.reason).toBe(true);
+
+    const ridotto = await reduceDays(db, 3);
+    expect(ridotto.ok, ridotto.ok ? "" : ridotto.reason).toBe(true);
+    const program = await getCurrentProgram(db);
+    expect(program?.weeks[0].days.length).toBe(3);
+  });
+
+  it("un esercizio del programma lasciato senza serie non blocca la progressione", async () => {
+    // con lo storico dietro: il carico c'e', la prestazione dentro il programma no
+    for (const id of await esercizDiSettimana1()) await allenaLibero([id], 40, 8);
+    const program = await genera();
+    const day = program.weeks[0].days[0];
+    const session = await startSession(db, { trainerDayId: day.id });
+    // si allena **solo il primo** esercizio: gli altri restano senza nessuna serie
+    const primo = session.exercises[0];
+    for (const set of primo.sets) {
+      await updateActiveSession(db, (current) =>
+        toggleSetCompleted(
+          patchSet(current, primo.id, set.id, { weightKg: 50, reps: 8, rpe: 7 }),
+          primo.id,
+          set.id,
+          true,
+          new Date().toISOString(),
+        ),
+      );
+    }
+    await expect(finishSession(db)).resolves.toBeTruthy();
+
+    const aggiornato = await getCurrentProgram(db);
+    const gemello = aggiornato!.weeks[1].days.find((item) => item.dayIndex === day.dayIndex);
+    for (const exercise of gemello!.exercises) {
+      expect(exercise.decisionId, exercise.exerciseName).toBeTruthy();
+    }
+  });
+});
+
+/*
+  §9.6: `/home` e la `Sidebar` leggono il programma per sapere se **oggi** c'e' un
+  allenamento previsto. Una sola funzione per tutti e due: due letture diverse dello
+  stesso stato sarebbero due badge che si contraddicono.
+*/
+describe("l'allenamento di oggi, per la home e per la sidebar", () => {
+  it("senza programma non c'e' niente da mostrare", async () => {
+    expect(await todayTrainerDay(db)).toBeNull();
+  });
+
+  it("e' il giorno previsto per oggi, con la sua settimana", async () => {
+    const program = await genera();
+    const oggi = await todayTrainerDay(db);
+    expect(oggi).not.toBeNull();
+    expect(oggi!.day.id).toBe(program.weeks[0].days[0].id);
+    expect(oggi!.week.index).toBe(1);
+    expect(oggi!.program.id).toBe(program.id);
+  });
+
+  it("sparisce appena l'allenamento di oggi e' fatto", async () => {
+    const program = await genera();
+    await allenaIlGiorno(program.weeks[0].days[0].id, 40, 8);
+    expect(await todayTrainerDay(db)).toBeNull();
+  });
+
+  it("nei giorni di riposo non c'e' nessun allenamento previsto", async () => {
+    const program = await genera();
+    // il giorno 3 del programma a 4 giorni cade due giorni dopo l'inizio
+    const domani = new Date(program.startedAt);
+    domani.setDate(domani.getDate() + 2);
+    expect(await todayTrainerDay(db, domani.toISOString())).toBeNull();
   });
 });

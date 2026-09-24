@@ -215,6 +215,16 @@ export const SetRow = React.memo(function SetRow({
           onChange={(event) =>
             onPatch({ rpe: event.target.value === "" ? null : Number(event.target.value) })
           }
+          /*
+            §8.4: l'RPE **entra** nella catena di `Invio` quando la colonna e' accesa,
+            quindi ne deve anche uscire. Senza questo, chi accende l'RPE perde lo
+            shortcut a meta' e torna al `Tab` (QA, secondo audit, DIFETTO 2).
+          */
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            focusNextField(event.currentTarget);
+          }}
           className={cn(
             "tnum h-12 w-12 rounded-[var(--radius-sm)] border border-[var(--border-strong)]",
             "bg-[var(--input)] px-1 text-center text-num-md text-[var(--text-primary)]",

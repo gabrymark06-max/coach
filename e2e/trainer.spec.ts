@@ -1,6 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { animazioniFinite, preparaApp, rispondiAlQuestionario } from "./helpers";
+import {
+  animazioniFinite,
+  conSidebar,
+  creaRoutineConEsercizio,
+  preparaApp,
+  rispondiAlQuestionario,
+} from "./helpers";
 
 /**
  * Il Trainer, percorso davvero: sei domande, un programma generato, una sessione
@@ -323,4 +329,144 @@ test("/trainer/nuovo porta al questionario", async ({ page }) => {
   await page.goto("/trainer/nuovo");
   await expect(page).toHaveURL(/\/trainer\/questionario/);
   await expect(page.getByText("Passo 1 di 6")).toBeVisible();
+});
+
+/**
+ * IL BLOCCANTE del secondo audit, percorso come lo ha percorso il QA: **si allena
+ * prima e si genera dopo.**
+ *
+ * La suite generava sempre da un database senza storico, che e' l'unico caso in cui la
+ * generazione funzionava. Questo test e' il caso reale: il Trainer e' un'aggiunta a un
+ * tracker che l'utente usa gia'.
+ */
+test("si genera il programma anche con uno storico di allenamenti alle spalle", async ({
+  page,
+}) => {
+  await preparaApp(page);
+
+  // 1 — un allenamento vero su un esercizio che il generatore mette in settimana 1
+  await creaRoutineConEsercizio(page, "Storico");
+  await page.getByRole("button", { name: "AVVIA", exact: true }).click();
+  await chiudiAllenamento(page, "80", "8");
+
+  // 2 — e adesso il questionario, dall'inizio alla fine
+  await rispondiAlQuestionario(page);
+
+  await expect(
+    page.getByRole("heading", { name: /Ipertrofia · 4 giorni · 8 settimane/ }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Giorno A/ })).toBeVisible();
+
+  // il carico dello storico e' dentro il programma, e la riga dice da dove viene
+  await expect(page.getByText(/dall'ultima volta che l'hai fatto/).first()).toBeVisible();
+
+  // 3 — «Rigenera da qui» e «Cambia le risposte» passano dalla stessa porta
+  await page.goto("/trainer/questionario");
+  await page.getByRole("button", { name: "Genera il programma" }).click();
+  await expect(page).toHaveURL(/\/trainer$/, { timeout: 20_000 });
+  await expect(
+    page.getByRole("heading", { name: /Ipertrofia · 4 giorni · 8 settimane/ }),
+  ).toBeVisible();
+});
+
+/**
+ * DIFETTO 1: il questionario prometteva uno split e il generatore ne costruiva un
+ * altro. Con il preset «Corpo libero» a 3 giorni la promessa adesso e' quella vera, e
+ * il ripiego viene detto invece di essere scoperto dopo.
+ */
+test("il questionario promette lo split che il programma costruisce davvero", async ({
+  page,
+}) => {
+  await preparaApp(page);
+  await page.goto("/trainer/questionario");
+
+  await page.getByRole("radio", { name: /Ipertrofia/ }).click();
+  await page.getByRole("button", { name: "Avanti" }).click();
+  await page.getByRole("button", { name: "Avanti" }).click();
+  await page.getByRole("button", { name: /Corpo libero/ }).click();
+  await page.getByRole("button", { name: "Avanti" }).click();
+  await page.getByRole("radio", { name: /Intermedio/ }).click();
+  await page.getByRole("button", { name: "Avanti" }).click();
+
+  // passo 5: niente Push/Pull/Legs promesso a vuoto
+  await page.getByRole("radio", { name: "3", exact: true }).click();
+  await expect(page.getByText(/Full body ×3/).first()).toBeVisible();
+  await expect(page.getByText(/lascerebbe dei giorni quasi vuoti/)).toBeVisible();
+  await page.getByRole("radio", { name: "60 min" }).click();
+  await page.getByRole("button", { name: "Avanti" }).click();
+
+  // passo 6: il riepilogo dice la stessa cosa
+  await expect(page.getByText(/3 giorni da 60 minuti · Full body ×3/)).toBeVisible();
+  await page.getByRole("button", { name: "Genera il programma" }).click();
+  await expect(page).toHaveURL(/\/trainer$/, { timeout: 20_000 });
+
+  // e i giorni costruiti sono quelli promessi
+  await expect(page.getByRole("heading", { name: /^Giorno A · Full body/ })).toBeVisible();
+});
+
+/** §9.6: la card «Oggi» del Trainer sulla home, e il badge sulla voce della sidebar. */
+test("la home mostra l'allenamento di oggi e la sidebar lo segnala", async ({
+  page,
+}, testInfo) => {
+  await preparaApp(page);
+
+  // senza programma la card non esiste: l'invito al Trainer sta in /trainer
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { name: "Home", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Giorno A/ })).toHaveCount(0);
+
+  await rispondiAlQuestionario(page);
+  await page.goto("/home");
+
+  const card = page.getByRole("region", { name: /^Giorno A/ });
+  await expect(card).toBeVisible();
+  await expect(card.getByRole("button", { name: /Avvia l'allenamento/ })).toBeVisible();
+  await expect(card.getByRole("link", { name: "Vedi il programma" })).toBeVisible();
+
+  if (conSidebar(testInfo)) {
+    const voce = page.getByRole("navigation", { name: "Navigazione principale" }).getByRole("link", {
+      name: "Trainer, allenamento previsto oggi",
+    });
+    await expect(voce).toBeVisible();
+    await expect(voce).toContainText("Oggi");
+  }
+
+  // dalla home si parte: un tocco, e si e' dentro la sessione del giorno
+  await card.getByRole("button", { name: /Avvia l'allenamento/ }).click();
+  await expect(page).toHaveURL(/\/sessione/, { timeout: 20_000 });
+  await page.getByRole("button", { name: "Altre azioni della sessione" }).click();
+  await page.getByRole("menuitem", { name: /Scarta/ }).click();
+  await page.getByRole("button", { name: "Scarta", exact: true }).click();
+});
+
+/** DIFETTO 3: anche uno stato «non trovato» e' una rotta, e ha il suo `h1`. */
+test("le rotte che non esistono hanno comunque un solo h1", async ({ page }) => {
+  await preparaApp(page);
+
+  for (const rotta of [
+    "/esercizi/lib-non-esiste-affatto",
+    "/profilo/sessione/non-esiste",
+    "/trainer/giorno/non-esiste",
+  ]) {
+    await page.goto(rotta);
+    await page.waitForLoadState("networkidle");
+    const conteggi = await page.evaluate(() => ({
+      main: document.querySelectorAll("main").length,
+      h1: document.querySelectorAll("h1").length,
+      titolo: document.querySelector("h1")?.textContent ?? "",
+    }));
+    expect(conteggi.main, rotta).toBe(1);
+    expect(conteggi.h1, rotta).toBe(1);
+    expect(conteggi.titolo.trim().length, rotta).toBeGreaterThan(0);
+  }
+});
+
+/** DIFETTO 4: l'app installata si apre sulla home vera, non sulla tab 2 della v1. */
+test("il manifest parte da /home", async ({ page }) => {
+  const risposta = await page.request.get("/manifest.webmanifest");
+  expect(risposta.ok()).toBe(true);
+  const manifest = await risposta.json();
+  expect(manifest.start_url).toBe("/home");
+  expect(manifest.id).toBe("/home");
+  expect(manifest.shortcuts.map((s: { url: string }) => s.url)).toContain("/trainer");
 });

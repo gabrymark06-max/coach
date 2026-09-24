@@ -1,4 +1,4 @@
-import { programClock, performedIn } from "@/lib/trainer/clock";
+import { programClock, performedIn, todayFocus } from "@/lib/trainer/clock";
 import {
   generateProgram,
   type ExerciseHistory,
@@ -19,6 +19,7 @@ import type {
   TrainerDay,
   TrainerProfile,
   TrainerProgram,
+  TrainerWeek,
 } from "./trainer-schema";
 
 /**
@@ -152,6 +153,24 @@ export async function createProgramFromDraft(
   );
 
   return { ok: true, program };
+}
+
+/**
+ * L'allenamento del Trainer previsto **oggi**, se c'e' e non e' gia' fatto (§9.6).
+ *
+ * La leggono `/home` (per la card «Oggi») e la `Sidebar` (per il badge): una funzione
+ * sola, perche' due letture diverse dello stesso stato sarebbero due schermate che si
+ * contraddicono a vicenda sullo stesso giorno.
+ */
+export async function todayTrainerDay(
+  db: LiftedDB,
+  now: ISODate = nowIso(),
+): Promise<{ program: TrainerProgram; week: TrainerWeek; day: TrainerDay } | null> {
+  const program = await getCurrentProgram(db);
+  if (!program || program.status !== "active") return null;
+  const focus = todayFocus(program, now);
+  if (focus.kind !== "allenamento") return null;
+  return { program, week: focus.week, day: focus.day };
 }
 
 /** L'ultimo carico di lavoro per esercizio, letto dallo storico gia' presente. */

@@ -41,7 +41,7 @@ function decidi(patch: Partial<DecideInput> = {}) {
   });
 }
 
-describe("le nove regole sono dati, non `if` sparsi", () => {
+describe("le dieci regole sono dati, non `if` sparsi", () => {
   it("ha una voce di tabella per ognuna, con nome e spiegazione", () => {
     const nomi = Object.keys(PROGRESSION_RULES).sort();
     expect(nomi).toEqual(
@@ -55,6 +55,7 @@ describe("le nove regole sono dati, non `if` sparsi", () => {
         "reps-first",
         "rpe-cap",
         "skip-hold",
+        "carry-over",
       ].sort(),
     );
     for (const rule of Object.values(PROGRESSION_RULES)) {
@@ -234,6 +235,87 @@ describe("ogni decisione dice che cosa serve per il passo dopo", () => {
       const d = decidi(caso);
       expect(d.nextStepHint.trim(), d.rule).not.toBe("");
       expect(d.humanReason.trim(), d.rule).not.toBe("");
+    }
+  });
+});
+
+/*
+  Il bloccante del secondo audit, in forma di test.
+
+  «Nessuna prestazione da leggere» non e' un caso di bordo: e' la **prima settimana di
+  ogni programma**, dove il carico arriva dallo storico fuori dal programma e dentro il
+  programma non c'e' ancora nemmeno una serie. Tutta la coda di `decideProgression` che
+  legge `performances[0]` non deve essere nemmeno raggiungibile da li'.
+*/
+describe("nessuna prestazione dentro il programma", () => {
+  it("tiene il carico seminato dallo storico invece di rompersi", () => {
+    const d = decidi({ performances: [] });
+    expect(d.rule).toBe("carry-over");
+    expect(d.direction).toBe("hold");
+    expect(d.fromWeightKg).toBe(80);
+    expect(d.toWeightKg).toBe(80);
+    expect(d.humanReason).toMatch(/ultimo carico|dall'ultima volta/i);
+    expect(d.nextStepHint).toContain("80");
+  });
+
+  it("l'evidenza e' vuota, e lo dice: nessuna seduta citata", () => {
+    const d = decidi({ performances: [] });
+    expect(d.evidence.sessionIds).toEqual([]);
+    expect(d.evidence.setsCompleted).toBe(0);
+    expect(d.evidence.repsAchieved).toEqual([]);
+    expect(d.evidence.setsPlanned).toBe(3);
+  });
+
+  it("senza carico seminato resta «prima volta»", () => {
+    const d = decidi({ planned: { ...PIANO, suggestedWeightKg: null }, performances: [] });
+    expect(d.rule).toBe("first-time");
+    expect(d.toWeightKg).toBeNull();
+  });
+
+  it("una settimana saltata resta «settimana saltata», non «carico ripreso»", () => {
+    const d = decidi({ performances: [], weekSkipped: true });
+    expect(d.rule).toBe("skip-hold");
+  });
+
+  it("lo scarico programmato scatta lo stesso, senza prestazioni", () => {
+    const d = decidi({ performances: [], nextWeekKind: "scarico" });
+    expect(d.rule).toBe("planned-deload");
+    expect(d.toWeightKg).toBe(72.5);
+  });
+
+  it("l'override manuale vince anche qui", () => {
+    const d = decidi({ performances: [], manual: { weightKg: 70 } });
+    expect(d.rule).toBe("manual");
+    expect(d.toWeightKg).toBe(70);
+  });
+
+  /*
+    La prova strutturale: **nessuna** combinazione di ingressi senza prestazioni puo'
+    finire su una regola che la prestazione la legge. Se un domani qualcuno aggiunge un
+    ramo che dereferenzia `performances[0]`, e' questo test a cadere per primo.
+  */
+  it("non puo' uscire nessuna regola che legge una prestazione", () => {
+    const leggonoLaPrestazione = [
+      "double-progression",
+      "reps-first",
+      "rpe-cap",
+      "hold-on-miss",
+      "deload-on-miss",
+    ];
+    for (const nextWeekKind of ["accumulo", "intensificazione", "scarico"] as const) {
+      for (const weekSkipped of [false, true]) {
+        for (const suggestedWeightKg of [null, 80]) {
+          const d = decidi({
+            performances: [],
+            nextWeekKind,
+            weekSkipped,
+            planned: { ...PIANO, suggestedWeightKg },
+          });
+          expect(leggonoLaPrestazione, `${nextWeekKind}/${weekSkipped}/${suggestedWeightKg}`).not.toContain(d.rule);
+          expect(d.nextStepHint.trim()).not.toBe("");
+          expect(d.humanReason.trim()).not.toBe("");
+        }
+      }
     }
   });
 });

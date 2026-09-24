@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
+import { getDb } from "@/lib/db/db";
+import { todayTrainerDay } from "@/lib/db/trainer-ops";
+import { useLiveData } from "@/lib/hooks/use-live-data";
 import { GlobalSearch } from "./global-search";
 import { LocalStateBlock } from "./local-state-block";
 import { isActive, NAV_ITEMS, PROFILE_SUBNAV, SETTINGS_ITEM } from "./nav-items";
@@ -24,6 +27,15 @@ import { cn } from "@/lib/utils";
 export function Sidebar() {
   const pathname = usePathname();
   const profiloAttivo = isActive(pathname, NAV_ITEMS[NAV_ITEMS.length - 1]);
+
+  /*
+    §9.6 — la sidebar legge il programma per il badge «Oggi» sulla voce Trainer. E'
+    l'unica lettura di Dexie del guscio, e non ha ne' scheletro ne' stato d'errore di
+    proposito: il badge o c'e' o non c'e', e una navigazione che «carica» sarebbe un
+    guscio che sfarfalla a ogni cambio di rotta.
+  */
+  const trainerOggi = useLiveData(() => todayTrainerDay(getDb()), []);
+  const badgeTrainer = trainerOggi.status === "ready" && trainerOggi.data != null;
 
   return (
     <nav
@@ -61,6 +73,14 @@ export function Sidebar() {
                 icon={item.icon}
                 active={active}
                 current={pathname === item.href}
+                badge={
+                  item.href === "/trainer" && badgeTrainer
+                    ? {
+                        text: "Oggi",
+                        label: "Trainer, allenamento previsto oggi",
+                      }
+                    : undefined
+                }
               />
               {/*
                 §4.19.2 — le sotto-voci compaiono solo quando Profilo e' la sezione
@@ -135,17 +155,24 @@ function SidebarLink({
   icon: Icon,
   active,
   current,
+  badge,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
   active: boolean;
   current: boolean;
+  /**
+   * §4.19.1 — testo + nome accessibile esteso, mai un numero senza nome. Il badge non
+   * e' un secondo canale del colore: la parola «Oggi» si legge anche in scala di grigi.
+   */
+  badge?: { text: string; label: string };
 }) {
   return (
     <Link
       href={href}
       aria-current={current ? "page" : undefined}
+      aria-label={badge?.label}
       className={cn(
         "relative flex h-[var(--sidebar-item-h)] items-center gap-4 rounded-[var(--radius-md)] px-4",
         "transition-[background-color,color] duration-[var(--dur-1)] ease-[var(--ease-out)]",
@@ -171,6 +198,14 @@ function SidebarLink({
         fillOpacity={active ? 0.22 : 0}
       />
       <span className="min-w-0 flex-1 truncate">{label}</span>
+      {badge ? (
+        <span
+          aria-hidden="true"
+          className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--primary)] px-2 py-0.5 text-label font-semibold text-[var(--primary-foreground)]"
+        >
+          {badge.text}
+        </span>
+      ) : null}
     </Link>
   );
 }

@@ -31,6 +31,12 @@ export type ProgressionRule =
   | "deload-on-miss"
   | "planned-deload"
   | "skip-hold"
+  /**
+   * Il carico arriva dallo storico **fuori** dal programma e dentro il programma non
+   * c'e' ancora nessuna serie: prima settimana, o esercizio mai registrato. Si riparte
+   * da li' senza inventare una progressione che nessun dato sostiene.
+   */
+  | "carry-over"
   | "first-time"
   | "manual";
 

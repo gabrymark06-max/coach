@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { LIBRARY } from "@/lib/db/library";
 import { DEFAULT_SETTINGS, type Equipment, type Exercise } from "@/lib/db/schema";
 import type { TrainerProfile, TrainerProgram } from "@/lib/db/trainer-schema";
-import { generateProgram, type GenerateInput } from "./generator";
+import { generateProgram, resolveSplit, type GenerateInput } from "./generator";
 import { patternOf } from "./patterns";
+import { fallbackSplit, splitFor } from "./splits";
 
 /**
  * La libreria vera, tradotta in `Exercise` come la legge il database. Il generatore
@@ -295,5 +296,71 @@ describe("generateProgram — il carico della prima settimana", () => {
     const program = genera();
     const dopo = ogniEsercizio(program).filter(({ week }) => week.index > 1);
     expect(dopo.every(({ exercise }) => exercise.suggestedWeightKg === null)).toBe(true);
+  });
+});
+
+/*
+  DIFETTO 1 del secondo audit: il questionario prometteva «Push/Pull/Legs» e il
+  generatore, con il solo corpo libero, costruiva un «Full body». La promessa e la
+  costruzione devono uscire dalla **stessa** funzione.
+*/
+describe("resolveSplit — quello che si promette e' quello che si costruisce", () => {
+  const risolvi = (patch: Partial<TrainerProfile> = {}) =>
+    resolveSplit({ profile: profilo(patch), library: CATALOGO });
+
+  it("in palestra completa lo split e' quello della tabella", () => {
+    const esito = risolvi({ daysPerWeek: 3, level: "intermediate" });
+    expect(esito.ok).toBe(true);
+    if (!esito.ok) return;
+    expect(esito.label).toBe("Push/Pull/Legs");
+    expect(esito.fellBack).toBe(false);
+  });
+
+  it("a corpo libero dice «Full body ×3», che e' quello che esce davvero", () => {
+    const esito = risolvi({
+      daysPerWeek: 3,
+      level: "intermediate",
+      equipment: ["bodyweight"],
+    });
+    expect(esito.ok).toBe(true);
+    if (!esito.ok) return;
+    expect(esito.label).toBe("Full body ×3");
+    expect(esito.intendedLabel).toBe("Push/Pull/Legs");
+    expect(esito.fellBack).toBe(true);
+  });
+
+  it("l'etichetta risolta corrisponde ai giorni che il programma costruisce", () => {
+    for (const equipment of [["bodyweight"], PALESTRA] as Equipment[][]) {
+      for (const daysPerWeek of [2, 3, 4, 5, 6] as const) {
+        const contesto = `${equipment.length} attrezzi / ${daysPerWeek} giorni`;
+        const esito = risolvi({ daysPerWeek, equipment, level: "intermediate" });
+        expect(esito.ok, contesto).toBe(true);
+        if (!esito.ok) continue;
+
+        const atteso = esito.fellBack
+          ? fallbackSplit(daysPerWeek)
+          : splitFor(daysPerWeek, "intermediate");
+        expect(esito.label, contesto).toBe(atteso.label);
+
+        const program = genera({ daysPerWeek, equipment, level: "intermediate" });
+        const giorni = program.weeks[0].days.map((day) => day.name.split(" · ")[1]);
+        expect(giorni, contesto).toEqual(atteso.days.map((template) => template.label));
+      }
+    }
+  });
+
+  it("quando l'attrezzatura non basta lo dice subito, con la stessa frase della generazione", () => {
+    const esito = risolvi({ daysPerWeek: 4, equipment: ["medicine-ball"] });
+    expect(esito.ok).toBe(false);
+    if (esito.ok) return;
+    const generato = generateProgram({
+      profile: profilo({ daysPerWeek: 4, equipment: ["medicine-ball"] }),
+      library: CATALOGO,
+      settings: DEFAULT_SETTINGS,
+      now: "2026-09-23T08:00:00.000Z",
+    });
+    expect(generato.ok).toBe(false);
+    if (generato.ok) return;
+    expect(esito.reason).toBe(generato.reason);
   });
 });

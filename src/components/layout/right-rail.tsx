@@ -67,10 +67,17 @@ export function RailCard({
   title,
   children,
   action,
+  bleed,
 }: {
   title: string;
   children: React.ReactNode;
   action?: React.ReactNode;
+  /**
+   * Il contenuto arriva ai bordi della card invece di stare dentro l'imbottitura.
+   * Serve alla griglia del calendario: dentro i 16px per lato la cella scende a 37px,
+   * sotto i 40px del cerchio che il sistema disegna (QA, secondo audit, DIFETTO 7).
+   */
+  bleed?: boolean;
 }) {
   const titleId = React.useId();
   return (
@@ -81,7 +88,7 @@ export function RailCard({
       <h2 id={titleId} className="text-h3 text-[var(--text-primary)]">
         {title}
       </h2>
-      <div className="mt-3">{children}</div>
+      <div className={cn("mt-3", bleed && "-mx-4")}>{children}</div>
       {action ? <div className="mt-3">{action}</div> : null}
     </section>
   );

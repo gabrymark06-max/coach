@@ -5,7 +5,6 @@ import {
   type MuscleGroup,
 } from "@/lib/db/schema";
 import type { TrainerGoal, TrainerLevel, TrainerProfile } from "@/lib/db/trainer-schema";
-import { splitLabel } from "./generator";
 import type { DaysPerWeek } from "./splits";
 
 /**
@@ -148,6 +147,10 @@ export const LEVELS: { value: TrainerLevel; title: string; line: string }[] = [
 export const DAYS_CHOICES: DaysPerWeek[] = [2, 3, 4, 5, 6];
 export const MINUTES_CHOICES: (45 | 60 | 75 | 90)[] = [45, 60, 75, 90];
 
+/** I valori che il passo 5 mostra selezionati finche' l'utente non tocca niente. */
+export const DEFAULT_DAYS: DaysPerWeek = 3;
+export const DEFAULT_MINUTES: 45 | 60 | 75 | 90 = 60;
+
 export type Draft = Partial<Omit<TrainerProfile, "id">>;
 
 export const EMPTY_DRAFT: Draft = {
@@ -224,6 +227,25 @@ export function firstIncompleteStep(draft: Draft): Step {
 }
 
 /** Il profilo completo, se la bozza lo è. `null` finché manca una risposta. */
+/**
+ * Il profilo **provvisorio** del passo 5: quello che l'utente vede selezionato adesso,
+ * anche se non ha ancora toccato giorni e durata. Serve a risolvere lo split mentre si
+ * risponde — e i valori di ripiego sono gli stessi che la UI mostra, non altri.
+ */
+export function draftProfile(draft: Draft): TrainerProfile | null {
+  if (!draft.goal || !draft.level) return null;
+  if ((draft.equipment?.length ?? 0) === 0) return null;
+  return {
+    id: "singleton",
+    goal: draft.goal,
+    priorityMuscles: (draft.priorityMuscles ?? []).slice(0, MAX_PRIORITY_MUSCLES),
+    equipment: draft.equipment ?? [],
+    level: draft.level,
+    daysPerWeek: draft.daysPerWeek ?? DEFAULT_DAYS,
+    sessionMinutes: draft.sessionMinutes ?? DEFAULT_MINUTES,
+  };
+}
+
 export function toProfile(draft: Draft): TrainerProfile | null {
   if (!draft.goal || !draft.level || !draft.daysPerWeek || !draft.sessionMinutes) return null;
   if ((draft.equipment?.length ?? 0) === 0) return null;
@@ -238,8 +260,17 @@ export function toProfile(draft: Draft): TrainerProfile | null {
   };
 }
 
-/** Le risposte in chiaro, per il riepilogo del passo 6 (ognuna con il suo «Modifica»). */
-export function summaryRows(draft: Draft): { step: Step; label: string; value: string }[] {
+/**
+ * Le risposte in chiaro, per il riepilogo del passo 6 (ognuna con il suo «Modifica»).
+ *
+ * `splitLabel` arriva **da fuori**, gia' risolto da `resolveSplit` sulla libreria vera:
+ * il riepilogo non ha piu' modo di promettere uno split che il generatore non
+ * costruira' (QA, secondo audit, DIFETTO 1).
+ */
+export function summaryRows(
+  draft: Draft,
+  splitLabel: string | null,
+): { step: Step; label: string; value: string }[] {
   return [
     {
       step: 1,
@@ -269,10 +300,9 @@ export function summaryRows(draft: Draft): { step: Step; label: string; value: s
       label: "Settimana",
       value:
         draft.daysPerWeek && draft.sessionMinutes && draft.level
-          ? `${draft.daysPerWeek} giorni da ${draft.sessionMinutes} minuti · ${splitLabel(
-              draft.daysPerWeek,
-              draft.level,
-            )}`
+          ? `${draft.daysPerWeek} giorni da ${draft.sessionMinutes} minuti${
+              splitLabel ? ` · ${splitLabel}` : ""
+            }`
           : "—",
     },
   ];
@@ -294,9 +324,4 @@ export function describeEquipment(equipment: readonly Equipment[]): string {
     .slice(0, 3)
     .map((item) => EQUIPMENT_LABEL[item])
     .join(", ")}…`;
-}
-
-/** «4 giorni → Upper/Lower ×2»: si mostra al passo 5, prima di generare. */
-export function splitPreview(days: DaysPerWeek, level: TrainerLevel | undefined): string {
-  return splitLabel(days, level ?? "intermediate");
 }

@@ -6,9 +6,11 @@ import {
   type LiftedBackup,
 } from "@/lib/backup/format";
 import { nowIso, type LiftedDB } from "./db";
+import { LIBRARY_META_KEY } from "./library";
 import { LATEST_SCHEMA_VERSION } from "./migrations";
 import { rebuildPersonalRecords } from "./pr-ops";
 import { DEFAULT_SETTINGS, type Settings } from "./schema";
+import { ensureSeeded } from "./seed";
 
 /**
  * Export e ripristino (spec §3.7).
@@ -174,6 +176,17 @@ export async function restoreBackup(
       await db.settings.put(settings);
     },
   );
+
+  /*
+    Un import che porta zero esercizi lascerebbe l'app senza libreria e senza modo di
+    tornare indietro: `ensureSeeded` si ferma sul segno di versione in `appMeta`, che
+    l'import non tocca. «Cancella tutti i dati» invece risemina, perche' `appMeta` lo
+    svuota. Qui si fa la stessa cosa, e solo qui: un backup vero la libreria ce l'ha.
+  */
+  if (data.exercises.length === 0) {
+    await db.appMeta.delete(LIBRARY_META_KEY);
+    await ensureSeeded(db);
+  }
 
   // Un backup di una versione senza record personali non deve restare senza record:
   // si ricalcolano dallo storico appena importato.

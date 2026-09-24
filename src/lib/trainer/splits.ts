@@ -346,7 +346,9 @@ export function orderedSlots(
  * non ci sono rematori, non ci sono curl, e il giorno uscirebbe con un esercizio.
  * Invece di consegnarlo mezzo vuoto o di rifiutare tutto, il generatore ripiega sul
  * full body, che ha slot piu' larghi e sopporta un catalogo stretto. E' un
- * adattamento, e viene detto: il nome del programma porta lo split che e' uscito.
+ * adattamento, **e viene detto prima**: `resolveSplit` (`generator.ts`) risolve il
+ * ripiego e il questionario mostra lo split che uscira' davvero, con la riga che
+ * spiega perche' non e' quello previsto per quel numero di giorni.
  */
 export function fallbackSplit(days: DaysPerWeek): Split {
   const rotation = [TEMPLATES["full-a"], TEMPLATES["full-b"], TEMPLATES["full-c"]];

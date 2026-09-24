@@ -9,6 +9,7 @@ import {
   type FeedCardData,
 } from "@/components/history/workout-feed-card";
 import { QuickActions, RailCard, RailStat, RightRail } from "@/components/layout/right-rail";
+import { TrainerTodayCard } from "@/components/trainer/home-today-card";
 import { PageHeader } from "@/components/shared/page-header";
 import { QuickStart } from "@/components/shared/quick-start";
 import { Async, EmptyState } from "@/components/shared/states";
@@ -21,6 +22,7 @@ import {
   listCompletedSessions,
   listRoutines,
 } from "@/lib/db/queries";
+import { todayTrainerDay } from "@/lib/db/trainer-ops";
 import type { MuscleGroup } from "@/lib/db/schema";
 import { formatSessionCount, formatVolumeKg } from "@/lib/format";
 import { useLiveData } from "@/lib/hooks/use-live-data";
@@ -43,11 +45,14 @@ export function HomeView() {
 
   const state = useLiveData(async () => {
     const db = getDb();
-    const [sessions, records, totale, routines] = await Promise.all([
+    const now = new Date().toISOString();
+    const [sessions, records, totale, routines, trainerOggi] = await Promise.all([
       listCompletedSessions(db, limite),
       listPersonalRecords(db),
       countCompletedSessions(db),
       listRoutines(db),
+      // §9.6: la home legge il programma attivo per sapere se oggi c'e' un allenamento
+      todayTrainerDay(db, now),
     ]);
 
     // Un solo passaggio sulla libreria per sapere che muscolo mostrare nel quadratino.
@@ -89,7 +94,7 @@ export function HomeView() {
       )[0] ??
       null;
 
-    return { cards, totale, lastRoutine };
+    return { cards, totale, lastRoutine, trainerOggi, now };
   }, [limite]);
 
   return (
@@ -98,6 +103,20 @@ export function HomeView() {
 
       <div className="app-container flex flex-col gap-8">
         <QuickStart size="compact" lastRoutine={state.data?.lastRoutine} />
+
+        {/*
+          §6.7 blocco 3: la card del Trainer **solo se** oggi c'e' un allenamento
+          previsto e non ancora fatto. Non ha uno stato vuoto e non ha uno scheletro:
+          una card che compare per dire «niente da fare» e' rumore, e un segnaposto per
+          chi il Trainer non lo usa sposterebbe il feed a ogni caricamento.
+        */}
+        {state.status === "ready" && state.data.trainerOggi ? (
+          <TrainerTodayCard
+            week={state.data.trainerOggi.week}
+            day={state.data.trainerOggi.day}
+            now={state.data.now}
+          />
+        ) : null}
 
         <section aria-labelledby="titolo-feed" className="flex flex-col gap-4">
           <h2 id="titolo-feed" className="text-h2 text-[var(--text-primary)]">

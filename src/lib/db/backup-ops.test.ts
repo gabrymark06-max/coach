@@ -122,6 +122,30 @@ describe("export → import", () => {
     expect(esito.rebuiltRecords).toBe(3);
     expect(await listPersonalRecords(db)).toHaveLength(3);
   });
+
+  /*
+    QA, secondo audit, DIFETTO 9: un file modificato a mano con `exercises: []` lasciava
+    la libreria vuota **per sempre** — «Cancella tutti i dati» risemina, l'import no —
+    e senza un modo di tornare indietro che non fosse cancellare tutto.
+  */
+  it("un import senza esercizi rimette la libreria di base", async () => {
+    await datiDiProva();
+    const backup = await createBackup(db);
+    const senzaLibreria = {
+      ...backup,
+      data: { ...backup.data, exercises: [] },
+      counts: { ...backup.counts, exercises: 0 },
+    };
+
+    const esito = await restoreBackup(db, senzaLibreria);
+
+    const quanti = await db.exercises.count();
+    expect(quanti).toBeGreaterThan(200);
+    expect(esito.counts.exercises).toBe(quanti);
+    // e sono quelli di sistema, non i personalizzati dell'utente
+    const tutti = await db.exercises.toArray();
+    expect(tutti.every((row) => !row.isCustom)).toBe(true);
+  });
 });
 
 describe("import di un file malformato", () => {

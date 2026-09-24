@@ -8,7 +8,7 @@ import type {
 } from "@/lib/db/trainer-schema";
 
 /**
- * Il motore di progressione — le nove regole di §4.25.
+ * Il motore di progressione — le regole di §4.25, piu' `carry-over`.
  *
  * **Sono dati, non `if` sparsi.** `PROGRESSION_RULES` e' la tabella che il foglio
  * «Perche' questo carico» legge per scrivere il nome della regola e la riga di
@@ -67,6 +67,12 @@ export const PROGRESSION_RULES: Record<ProgressionRule, RuleSpec> = {
     when: "Nella settimana non è stato registrato nessun allenamento.",
     effect: "Nessuna progressione. Il carico resta l'ultimo che hai davvero usato.",
   },
+  "carry-over": {
+    name: "Carico ripreso",
+    when: "Non ho ancora una tua serie su questo esercizio dentro il programma.",
+    effect:
+      "Parto dall'ultimo carico che hai usato davvero e comincio a salire dalla prima serie che registri.",
+  },
   "first-time": {
     name: "Prima volta",
     when: "Non ho nessuno storico per questo esercizio.",
@@ -88,6 +94,7 @@ export const PROGRESSION_RULE_ORDER: readonly ProgressionRule[] = [
   "deload-on-miss",
   "planned-deload",
   "skip-hold",
+  "carry-over",
   "first-time",
   "manual",
 ];
@@ -142,99 +149,165 @@ export type DecisionDraft = Pick<
 
 const DELOAD_FACTOR = 0.9;
 
+/**
+ * Il contesto comune a tutte le regole: quello che si sa **prima** di guardare che cosa
+ * l'utente ha fatto. Passarlo esplicito e' quello che permette di tenere separate le
+ * regole che leggono una prestazione da quelle che non ne hanno bisogno.
+ */
+interface Context {
+  range: [number, number];
+  evidence: ProgressionDecision["evidence"];
+}
+
 export function decideProgression(input: DecideInput): DecisionDraft {
-  const { planned, performances, stepKg, fineStepKg, rpeCap } = input;
+  const { planned, performances } = input;
   const last = performances[0];
   const previous = performances[1];
 
   const range: [number, number] = [planned.repsMin, planned.repsMax];
   const base = workingWeight(last) ?? planned.suggestedWeightKg;
-  const evidence = evidenceOf(planned, performances.slice(0, 2));
+  const context: Context = {
+    range,
+    evidence: evidenceOf(planned, performances.slice(0, 2)),
+  };
 
   // 1 — la scelta dell'utente vince su tutto, anche sullo scarico programmato.
-  if (input.manual) {
-    const note = input.manual.note?.trim();
-    return {
-      rule: "manual",
-      direction: "manual",
-      fromWeightKg: base,
-      toWeightKg: input.manual.weightKg,
-      fromReps: range,
-      toReps: range,
-      evidence,
-      humanReason: note
-        ? `Carico scelto da te: ${note}`
-        : `Carico scelto da te il ${shortDate(input.decidedAt)}`,
-      nextStepHint: `Riparto da ${formatKg(
-        input.manual.weightKg,
-      )}: completa ${planned.sets}×${planned.repsMax} a RPE ≤ ${formatRpe(planned.rpeTarget)} e torno a salire.`,
-    };
+  if (input.manual) return manualDecision(input, input.manual, base, context);
+
+  /*
+    2 — **la biforcazione strutturale.**
+
+    Da qui in giu' ci sono due famiglie di regole, e non si mescolano:
+     - quelle che leggono una prestazione (`decideFromPerformance`, che riceve un
+       `SessionPerformance` **non opzionale**: senza, non si compila);
+     - quelle che decidono senza, perche' una prestazione da leggere non c'e'
+       (`decideWithoutPerformance`).
+
+    Non avere una prestazione non e' un caso di bordo: e' **la prima settimana di ogni
+    programma**, dove il carico arriva dallo storico fuori dal programma e dentro il
+    programma non c'e' ancora nemmeno una serie. E' la il bloccante del secondo audit
+    del QA: la guardia di prima usciva solo se il carico mancava o se la settimana era
+    saltata, e con il carico seminato dallo storico il flusso proseguiva fino a leggere
+    una seduta che non esisteva.
+  */
+  if (input.weekSkipped || last == null) {
+    return decideWithoutPerformance(input, base, context);
   }
 
-  // 2 — settimana senza nemmeno un allenamento: non si tocca niente.
-  if (input.weekSkipped || performances.length === 0) {
-    if (base == null) {
-      return {
-        rule: "first-time",
-        direction: "hold",
-        fromWeightKg: null,
-        toWeightKg: null,
-        fromReps: null,
-        toReps: range,
-        evidence,
-        humanReason: "Prima volta — parti leggero e tara il carico",
-        nextStepHint: `Scegli un peso che ti lasci due ripetizioni di margine a fine serie: da ${planned.sets}×${planned.repsMax} in poi comincio a proporti io il carico.`,
-      };
-    }
-    if (input.weekSkipped) {
-      return {
-        rule: "skip-hold",
-        direction: "hold",
-        fromWeightKg: base,
-        toWeightKg: base,
-        fromReps: range,
-        toReps: range,
-        evidence,
-        humanReason: "Nessun allenamento registrato nella settimana",
-        nextStepHint: `Riprendi da ${formatKg(base)}: completa ${planned.sets}×${planned.repsMax} a RPE ≤ ${formatRpe(planned.rpeTarget)} e riparto a salire.`,
-      };
-    }
-  }
+  return decideFromPerformance(input, last, previous, base, context);
+}
 
-  // 3 — lo scarico e' programmato: scatta prima di qualunque lettura della prestazione.
-  if (input.nextWeekKind === "scarico" && base != null) {
-    const to = roundToStep(base * DELOAD_FACTOR, stepKg);
-    return {
-      rule: "planned-deload",
-      direction: "deload",
-      fromWeightKg: base,
-      toWeightKg: to,
-      fromReps: range,
-      toReps: range,
-      evidence,
-      humanReason: "Scarico — settimana di scarico prevista dal ciclo",
-      nextStepHint: `Fai questa settimana a ${formatKg(to)} senza cercare il massimo: la settimana dopo si riparte da ${formatKg(base)}.`,
-    };
-  }
+/** «Non sono d'accordo»: il carico scelto dall'utente diventa la nuova base. */
+function manualDecision(
+  input: DecideInput,
+  manual: NonNullable<DecideInput["manual"]>,
+  base: number | null,
+  { range, evidence }: Context,
+): DecisionDraft {
+  const { planned } = input;
+  const note = manual.note?.trim();
+  return {
+    rule: "manual",
+    direction: "manual",
+    fromWeightKg: base,
+    toWeightKg: manual.weightKg,
+    fromReps: range,
+    toReps: range,
+    evidence,
+    humanReason: note
+      ? `Carico scelto da te: ${note}`
+      : `Carico scelto da te il ${shortDate(input.decidedAt)}`,
+    nextStepHint: `Riparto da ${formatKg(
+      manual.weightKg,
+    )}: completa ${planned.sets}×${planned.repsMax} a RPE ≤ ${formatRpe(planned.rpeTarget)} e torno a salire.`,
+  };
+}
 
-  if (base == null) {
+/**
+ * Le regole che **non** leggono una prestazione, tutte insieme e tutte con un'uscita.
+ *
+ * Quattro situazioni, in quest'ordine:
+ *  1. non c'e' nessun carico da cui partire → `first-time`, campo vuoto;
+ *  2. la settimana e' passata senza allenamenti → `skip-hold`;
+ *  3. la settimana dopo e' di scarico → `planned-deload`, che non ha bisogno di sapere
+ *     com'e' andata;
+ *  4. il carico c'e' ma la serie no → `carry-over`: si riparte da li'.
+ *
+ * Nessun ramo cade oltre la fine: e' questo che rende impossibile riaprire il
+ * bloccante.
+ */
+function decideWithoutPerformance(
+  input: DecideInput,
+  base: number | null,
+  { range, evidence }: Context,
+): DecisionDraft {
+  const { planned, stepKg } = input;
+
+  if (base == null) return firstTime(planned, range, evidence);
+
+  if (input.weekSkipped) {
     return {
-      rule: "first-time",
+      rule: "skip-hold",
       direction: "hold",
-      fromWeightKg: null,
-      toWeightKg: null,
-      fromReps: null,
+      fromWeightKg: base,
+      toWeightKg: base,
+      fromReps: range,
       toReps: range,
       evidence,
-      humanReason: "Prima volta — parti leggero e tara il carico",
-      nextStepHint: `Scegli un peso che ti lasci due ripetizioni di margine a fine serie: da ${planned.sets}×${planned.repsMax} in poi comincio a proporti io il carico.`,
+      humanReason: "Nessun allenamento registrato nella settimana",
+      nextStepHint: `Riprendi da ${formatKg(base)}: completa ${planned.sets}×${planned.repsMax} a RPE ≤ ${formatRpe(planned.rpeTarget)} e riparto a salire.`,
     };
   }
+
+  if (input.nextWeekKind === "scarico") return plannedDeload(input, base, range, evidence);
+
+  /*
+    La prima settimana con storico: il generatore ha seminato il carico da un
+    allenamento **fuori** dal programma, e dentro il programma non c'e' ancora niente
+    da leggere. Non e' una settimana saltata — non c'era niente da saltare — e non e'
+    una prima volta, perche' un carico c'e'. E' un carico ripreso, e la riga del perche'
+    lo dice con queste parole.
+  */
+  return {
+    rule: "carry-over",
+    direction: "hold",
+    fromWeightKg: base,
+    toWeightKg: base,
+    fromReps: range,
+    toReps: range,
+    evidence,
+    humanReason: `Stesso carico — ${formatKg(base)} dall'ultima volta che l'hai fatto`,
+    nextStepHint: `Completa ${planned.sets}×${planned.repsMax} a ${formatKg(base)} con RPE ≤ ${formatRpe(planned.rpeTarget)} e la prossima volta salgo a ${formatKg(round2(base + stepKg))}.`,
+  };
+}
+
+/**
+ * Le regole che leggono davvero una seduta.
+ *
+ * `last` arriva **non opzionale**: e' il contratto che tiene chiuso il bloccante.
+ * Chiamarla senza una prestazione non e' un errore a runtime, e' un errore di
+ * compilazione.
+ */
+function decideFromPerformance(
+  input: DecideInput,
+  last: SessionPerformance,
+  previous: SessionPerformance | undefined,
+  base: number | null,
+  { range, evidence }: Context,
+): DecisionDraft {
+  const { planned, stepKg, fineStepKg, rpeCap } = input;
+
+  // lo scarico e' programmato: scatta prima di qualunque lettura della prestazione.
+  if (input.nextWeekKind === "scarico" && base != null) {
+    return plannedDeload(input, base, range, evidence);
+  }
+
+  if (base == null) return firstTime(planned, range, evidence);
 
   const missed = (performance: SessionPerformance | undefined) =>
     performance != null && belowFloor(performance, planned);
 
-  // 4 — due sedute di fila sotto il fondo: si scende.
+  // due sedute di fila sotto il fondo: si scende.
   if (missed(last) && missed(previous)) {
     const to = roundToStep(base * DELOAD_FACTOR, stepKg);
     return {
@@ -250,7 +323,7 @@ export function decideProgression(input: DecideInput): DecisionDraft {
     };
   }
 
-  // 5 — una sola seduta sotto il fondo: si tiene.
+  // una sola seduta sotto il fondo: si tiene.
   if (missed(last)) {
     return {
       rule: "hold-on-miss",
@@ -269,7 +342,7 @@ export function decideProgression(input: DecideInput): DecisionDraft {
   const meanRpe = averageRpe(last);
   const peakRpe = peak(last);
 
-  // 6 — tutte al tetto e RPE sotto controllo: si sale.
+  // tutte al tetto e RPE sotto controllo: si sale.
   if (atTop && (meanRpe == null || meanRpe <= planned.rpeTarget)) {
     const capped = peakRpe != null && peakRpe >= rpeCap;
 
@@ -317,7 +390,7 @@ export function decideProgression(input: DecideInput): DecisionDraft {
     };
   }
 
-  // 7 — dentro l'intervallo ma non in cima: prima le ripetizioni.
+  // dentro l'intervallo ma non in cima: prima le ripetizioni.
   const worst = lowestReps(last);
   const target = Math.min(planned.repsMax, worst + 1);
   return {
@@ -333,6 +406,46 @@ export function decideProgression(input: DecideInput): DecisionDraft {
         ? `Stesso carico — RPE medio ${formatRpe(meanRpe)}, sopra l'obiettivo ${formatRpe(planned.rpeTarget)}`
         : `Stesso carico — ${describeSets(last, planned)}`,
     nextStepHint: `Porta la serie da ${worst} a ${target} ripetizioni a ${formatKg(base)}: quando tutte arrivano a ${planned.repsMax}, salgo a ${formatKg(round2(base + stepKg))}.`,
+  };
+}
+
+/** Nessuno storico: il campo resta vuoto, e la riga del perche' lo spiega. */
+function firstTime(
+  planned: TrainerExercise,
+  range: [number, number],
+  evidence: ProgressionDecision["evidence"],
+): DecisionDraft {
+  return {
+    rule: "first-time",
+    direction: "hold",
+    fromWeightKg: null,
+    toWeightKg: null,
+    fromReps: null,
+    toReps: range,
+    evidence,
+    humanReason: "Prima volta — parti leggero e tara il carico",
+    nextStepHint: `Scegli un peso che ti lasci due ripetizioni di margine a fine serie: da ${planned.sets}×${planned.repsMax} in poi comincio a proporti io il carico.`,
+  };
+}
+
+/** Lo scarico del ciclo: non dipende da com'e' andata la settimana. */
+function plannedDeload(
+  input: DecideInput,
+  base: number,
+  range: [number, number],
+  evidence: ProgressionDecision["evidence"],
+): DecisionDraft {
+  const to = roundToStep(base * DELOAD_FACTOR, input.stepKg);
+  return {
+    rule: "planned-deload",
+    direction: "deload",
+    fromWeightKg: base,
+    toWeightKg: to,
+    fromReps: range,
+    toReps: range,
+    evidence,
+    humanReason: "Scarico — settimana di scarico prevista dal ciclo",
+    nextStepHint: `Fai questa settimana a ${formatKg(to)} senza cercare il massimo: la settimana dopo si riparte da ${formatKg(base)}.`,
   };
 }
 

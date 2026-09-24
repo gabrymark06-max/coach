@@ -9,12 +9,21 @@ import { Async, ListSkeleton } from "@/components/shared/states";
 import { Button } from "@/components/ui/button";
 import { announce } from "@/lib/announce";
 import { getDb } from "@/lib/db/db";
-import { EQUIPMENT_LABEL, MUSCLE_GROUP_LABEL, type Equipment, type MuscleGroup } from "@/lib/db/schema";
+import { describeError, logError } from "@/lib/errors";
+import {
+  EQUIPMENT_LABEL,
+  MUSCLE_GROUP_LABEL,
+  type Equipment,
+  type Exercise,
+  type MuscleGroup,
+} from "@/lib/db/schema";
 import { createProgramFromDraft, getTrainerProfile, saveDraft } from "@/lib/db/trainer-ops";
 import { useLiveData } from "@/lib/hooks/use-live-data";
 import { useReducedMotion } from "@/lib/hooks/use-reduced-motion";
 import {
   DAYS_CHOICES,
+  DEFAULT_DAYS,
+  DEFAULT_MINUTES,
   EMPTY_DRAFT,
   EQUIPMENT_CHOICES,
   EQUIPMENT_PRESETS,
@@ -25,14 +34,15 @@ import {
   PRIORITY_MUSCLES,
   STEPS,
   TOTAL_STEPS,
+  draftProfile,
   firstIncompleteStep,
-  splitPreview,
   summaryRows,
   validateStep,
   type Draft,
   type Step,
   type StepError,
 } from "@/lib/trainer/questionnaire";
+import { resolveSplit, type SplitOutcome } from "@/lib/trainer/generator";
 import { cn } from "@/lib/utils";
 
 /**
@@ -53,9 +63,18 @@ export function QuestionarioView() {
   const params = useSearchParams();
   const ricomincia = params.get("ricomincia") === "1";
 
+  /*
+    §9.6: il questionario legge anche `Exercise[]`, «per sapere cosa e' generabile con
+    gli attrezzi scelti». E' con quella libreria che lo split mostrato al passo 5 e al
+    passo 6 diventa quello che il generatore costruira' davvero.
+  */
   const state = useLiveData(async () => {
-    const profile = await getTrainerProfile(getDb());
-    return profile ?? null;
+    const db = getDb();
+    const [profile, library] = await Promise.all([
+      getTrainerProfile(db),
+      db.exercises.toArray(),
+    ]);
+    return { profile: profile ?? null, library };
   }, []);
 
   return (
@@ -66,8 +85,9 @@ export function QuestionarioView() {
         loading={<ListSkeleton rows={4} height={72} />}
         errorDetail="Non riesco a leggere le tue risposte su questo dispositivo."
       >
-        {(profile) => (
+        {({ profile, library }) => (
           <Form
+            library={library}
             iniziale={
               ricomincia || !profile
                 ? { ...EMPTY_DRAFT }
@@ -97,10 +117,12 @@ function Form({
   iniziale,
   passoIniziale,
   onFatto,
+  library,
 }: {
   iniziale: Draft;
   passoIniziale: Step;
   onFatto: () => void;
+  library: Exercise[];
 }) {
   const reduced = useReducedMotion();
   const [draft, setDraft] = React.useState<Draft>(iniziale);
@@ -110,6 +132,16 @@ function Form({
   const [inCorso, setInCorso] = React.useState(false);
   const erroreRef = React.useRef<HTMLParagraphElement>(null);
   const erroreId = React.useId();
+
+  /*
+    Lo split si risolve sulla libreria vera, ripiego compreso: e' la stessa funzione che
+    usa il generatore, quindi il passo 5 non puo' promettere un Push/Pull/Legs e il
+    programma consegnare un Full body (QA, secondo audit, DIFETTO 1).
+  */
+  const split = React.useMemo<SplitOutcome | null>(() => {
+    const profile = draftProfile(draft);
+    return profile ? resolveSplit({ profile, library }) : null;
+  }, [draft, library]);
 
   /** Ogni risposta si scrive subito: la bozza non aspetta la fine. */
   const rispondi = (patch: Draft) => {
@@ -154,9 +186,19 @@ function Form({
       announce("system", `Programma generato: ${result.program.name}.`);
       toast.success("Programma generato.");
       onFatto();
-    } catch {
+    } catch (error) {
+      /*
+        Un errore qui non e' «il dispositivo»: e' un difetto dell'app, e va detto dove
+        l'utente sta guardando — sotto la domanda, con il fuoco, come ogni altro errore
+        del questionario — e lasciato nei log per chi lo deve aggiustare.
+      */
+      logError("trainer/questionario/genera", error);
+      const detto = describeError(error);
       setInCorso(false);
-      toast.error("Non riesco a generare il programma su questo dispositivo.");
+      setErrore({ message: detto });
+      announce("system", detto);
+      toast.error(detto);
+      requestAnimationFrame(() => erroreRef.current?.focus());
     }
   };
 
@@ -211,23 +253,30 @@ function Form({
             reduced ? "animate-[lifted-fade-in_150ms_ease-out]" : "quiz-step",
           )}
         >
-          <fieldset className="min-w-0 border-0 p-0">
+          {/*
+            `aria-invalid` e `aria-describedby` stanno sul `<fieldset>`, che ha un ruolo
+            (`group`) e un nome (la `<legend>`): su un `<div>` nudo gli screen reader li
+            ignorano, e l'errore restava visibile ma muto (QA, secondo audit, DIFETTO 8).
+          */}
+          <fieldset
+            className="min-w-0 border-0 p-0"
+            aria-invalid={errore ? true : undefined}
+            aria-describedby={errore ? erroreId : undefined}
+          >
             <legend className="text-h1 text-[var(--text-primary)]">{meta.question}</legend>
             {meta.hint ? (
               <p className="mt-2 text-base text-[var(--text-secondary)]">{meta.hint}</p>
             ) : null}
 
-            <div
-              className="mt-5"
-              aria-invalid={errore ? true : undefined}
-              aria-describedby={errore ? erroreId : undefined}
-            >
+            <div className="mt-5">
               {step === 1 ? <Passo1 draft={draft} rispondi={rispondi} /> : null}
               {step === 2 ? <Passo2 draft={draft} rispondi={rispondi} /> : null}
               {step === 3 ? <Passo3 draft={draft} rispondi={rispondi} /> : null}
               {step === 4 ? <Passo4 draft={draft} rispondi={rispondi} /> : null}
-              {step === 5 ? <Passo5 draft={draft} rispondi={rispondi} /> : null}
-              {step === 6 ? <Passo6 draft={draft} vaiA={(s) => setStep(s)} /> : null}
+              {step === 5 ? <Passo5 draft={draft} rispondi={rispondi} split={split} /> : null}
+              {step === 6 ? (
+                <Passo6 draft={draft} vaiA={(s) => setStep(s)} split={split} />
+              ) : null}
             </div>
           </fieldset>
 
@@ -494,9 +543,17 @@ function Passo4({ draft, rispondi }: { draft: Draft; rispondi: (patch: Draft) =>
   );
 }
 
-function Passo5({ draft, rispondi }: { draft: Draft; rispondi: (patch: Draft) => void }) {
-  const giorni = draft.daysPerWeek ?? 3;
-  const minuti = draft.sessionMinutes ?? 60;
+function Passo5({
+  draft,
+  rispondi,
+  split,
+}: {
+  draft: Draft;
+  rispondi: (patch: Draft) => void;
+  split: SplitOutcome | null;
+}) {
+  const giorni = draft.daysPerWeek ?? DEFAULT_DAYS;
+  const minuti = draft.sessionMinutes ?? DEFAULT_MINUTES;
 
   return (
     <div className="flex flex-col gap-6">
@@ -529,9 +586,15 @@ function Passo5({ draft, rispondi }: { draft: Draft; rispondi: (patch: Draft) =>
             );
           })}
         </ul>
-        <p aria-live="polite" className="mt-3 text-base text-[var(--text-secondary)]">
-          {giorni} giorni → <strong className="text-[var(--text-primary)]">{splitPreview(giorni, draft.level)}</strong>
-        </p>
+        <div aria-live="polite" className="mt-3">
+          <p className="text-base text-[var(--text-secondary)]">
+            {giorni} giorni →{" "}
+            <strong className="text-[var(--text-primary)]">
+              {split == null || split.ok ? (split?.label ?? "—") : "non ci riesco"}
+            </strong>
+          </p>
+          <SplitNote split={split} />
+        </div>
       </div>
 
       <div>
@@ -568,10 +631,19 @@ function Passo5({ draft, rispondi }: { draft: Draft; rispondi: (patch: Draft) =>
   );
 }
 
-function Passo6({ draft, vaiA }: { draft: Draft; vaiA: (step: Step) => void }) {
+function Passo6({
+  draft,
+  vaiA,
+  split,
+}: {
+  draft: Draft;
+  vaiA: (step: Step) => void;
+  split: SplitOutcome | null;
+}) {
   return (
+    <>
     <ul className="flex flex-col">
-      {summaryRows(draft).map((row) => (
+      {summaryRows(draft, split?.ok ? split.label : null).map((row) => (
         <li
           key={row.step}
           className="flex items-center gap-3 border-t border-[var(--border)] py-3 first:border-t-0 first:pt-0"
@@ -591,5 +663,29 @@ function Passo6({ draft, vaiA }: { draft: Draft; vaiA: (step: Step) => void }) {
         </li>
       ))}
     </ul>
+    <div className="mt-3">
+      <SplitNote split={split} />
+    </div>
+    </>
+  );
+}
+
+/**
+ * La riga che spiega il ripiego — o il rifiuto — **prima** di generare.
+ *
+ * Senza, il programma esce con dei giorni che l'utente non ha mai visto nominare: e'
+ * il DIFETTO 1 del secondo audit, ed e' una promessa mancata, non un dettaglio.
+ */
+function SplitNote({ split }: { split: SplitOutcome | null }) {
+  if (split == null) return null;
+  if (!split.ok) {
+    return <p className="mt-2 text-sm text-[var(--text-secondary)]">{split.reason}</p>;
+  }
+  if (!split.fellBack) return null;
+  return (
+    <p className="mt-2 text-sm text-[var(--text-secondary)]">
+      Con questa attrezzatura un {split.intendedLabel} lascerebbe dei giorni quasi vuoti:
+      costruisco un {split.label}.
+    </p>
   );
 }

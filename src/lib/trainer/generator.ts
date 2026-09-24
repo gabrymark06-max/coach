@@ -48,7 +48,8 @@ import {
  * da li', altrimenti il campo resta vuoto ed e' la regola `first-time` a dirlo (§4.25).
  */
 
-export const RULE_SET_VERSION = 1;
+/** 2 — l'insieme delle regole di §4.25 piu' `carry-over` (bloccante del 2026-09-24). */
+export const RULE_SET_VERSION = 2;
 export const DEFAULT_WEEKS_TOTAL = 8;
 
 export interface ExerciseHistory {
@@ -84,12 +85,56 @@ const GOAL_LABEL: Record<TrainerProfile["goal"], string> = {
 
 const LETTERS = "ABCDEF";
 
-export function generateProgram(input: GenerateInput): GenerateResult {
-  const { profile, library, settings, now } = input;
-  const makeId = input.makeId ?? newId;
-  const weeksTotal = input.weeksTotal ?? DEFAULT_WEEKS_TOTAL;
-  const history = input.history ?? new Map<ID, ExerciseHistory>();
+/**
+ * Lo split che uscira' **davvero**, ripiego compreso — §4.23.
+ *
+ * Esiste perche' il questionario e il generatore devono dire la stessa cosa. Prima lo
+ * split mostrato al passo 5 veniva dalla tabella (giorni + livello) e il programma
+ * dalla tabella **o dal ripiego**: con il preset «Corpo libero» il questionario
+ * prometteva Push/Pull/Legs e il generatore consegnava Full body, senza che nessuna
+ * schermata lo dicesse (QA, secondo audit, DIFETTO 1). Adesso la promessa e la
+ * costruzione passano per questa funzione: non possono divergere.
+ */
+export type SplitOutcome =
+  | {
+      ok: true;
+      /** lo split che il generatore costruira': e' questo che si mostra */
+      label: string;
+      /** quello che la tabella prevede per giorni + livello */
+      intendedLabel: string;
+      /** vero quando l'attrezzatura non regge lo split previsto e si ripiega */
+      fellBack: boolean;
+    }
+  | { ok: false; reason: string };
 
+export function resolveSplit(input: {
+  profile: TrainerProfile;
+  library: readonly Exercise[];
+}): SplitOutcome {
+  const resolved = resolvePlan(input.profile, input.library);
+  if (!resolved.ok) return { ok: false, reason: resolved.reason };
+  if (!resolved.plan.ok) return { ok: false, reason: resolved.plan.reason };
+  return {
+    ok: true,
+    label: resolved.split.label,
+    intendedLabel: resolved.intendedLabel,
+    fellBack: resolved.fellBack,
+  };
+}
+
+interface ResolvedPlan {
+  ok: true;
+  split: Split;
+  intendedLabel: string;
+  fellBack: boolean;
+  plan: PlanResult;
+}
+
+/** Il pool, lo split e il ripiego: il pezzo di generazione che il questionario rigioca. */
+function resolvePlan(
+  profile: TrainerProfile,
+  library: readonly Exercise[],
+): ResolvedPlan | { ok: false; reason: string } {
   if (profile.equipment.length === 0) {
     return { ok: false, reason: "Non hai indicato nessun attrezzo." };
   }
@@ -118,9 +163,6 @@ export function generateProgram(input: GenerateInput): GenerateResult {
 
   const daysPerWeek = profile.daysPerWeek as DaysPerWeek;
   const perDay = exerciseCountFor(profile.sessionMinutes, profile.level);
-  const offsets = dayOffsets(daysPerWeek);
-  const deloadEvery = Math.max(2, settings.trainerDeloadEveryWeeks || 4);
-  const start = startOfDay(now);
 
   /*
     Lo split scelto, e il ripiego. Con un catalogo stretto — il preset «Corpo libero»
@@ -128,16 +170,35 @@ export function generateProgram(input: GenerateInput): GenerateResult {
     con un esercizio dentro. Allora si ripiega sul full body invece di consegnarlo
     monco, e solo se anche quello non regge si rifiuta con il motivo esatto (§4.23).
   */
-  let split = splitFor(daysPerWeek, profile.level);
+  const intended = splitFor(daysPerWeek, profile.level);
+  const fallback = fallbackSplit(daysPerWeek);
+  let split = intended;
   let plan = planDays(split, profile, byPattern, perDay);
-  if (!plan.ok && split.label !== fallbackSplit(daysPerWeek).label) {
-    split = fallbackSplit(daysPerWeek);
+  let fellBack = false;
+  if (!plan.ok && intended.label !== fallback.label) {
+    split = fallback;
     plan = planDays(split, profile, byPattern, perDay);
+    fellBack = true;
   }
-  if (!plan.ok) {
-    return { ok: false, reason: plan.reason };
-  }
-  const dayPlans = plan.dayPlans;
+
+  return { ok: true, split, intendedLabel: intended.label, fellBack, plan };
+}
+
+export function generateProgram(input: GenerateInput): GenerateResult {
+  const { profile, library, settings, now } = input;
+  const makeId = input.makeId ?? newId;
+  const weeksTotal = input.weeksTotal ?? DEFAULT_WEEKS_TOTAL;
+  const history = input.history ?? new Map<ID, ExerciseHistory>();
+
+  const resolved = resolvePlan(profile, library);
+  if (!resolved.ok) return { ok: false, reason: resolved.reason };
+  if (!resolved.plan.ok) return { ok: false, reason: resolved.plan.reason };
+
+  const daysPerWeek = profile.daysPerWeek as DaysPerWeek;
+  const offsets = dayOffsets(daysPerWeek);
+  const deloadEvery = Math.max(2, settings.trainerDeloadEveryWeeks || 4);
+  const start = startOfDay(now);
+  const dayPlans = resolved.plan.dayPlans;
 
   const weeks: TrainerWeek[] = [];
   for (let weekIndex = 1; weekIndex <= weeksTotal; weekIndex += 1) {
@@ -202,11 +263,6 @@ export function generateProgram(input: GenerateInput): GenerateResult {
   };
 
   return { ok: true, program };
-}
-
-/** Come si chiama lo split a parole: lo mostra il passo 5 del questionario. */
-export function splitLabel(days: DaysPerWeek, level: TrainerProfile["level"]): string {
-  return splitFor(days, level).label;
 }
 
 interface Chosen {

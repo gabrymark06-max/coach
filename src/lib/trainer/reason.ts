@@ -48,8 +48,8 @@ export function reasonView(
       text:
         exercise.suggestedWeightKg == null
           ? "Prima volta — parti leggero e tara il carico"
-          : `Stesso carico — ${formatKg(exercise.suggestedWeightKg)} dall'ultima volta`,
-      ruleName: PROGRESSION_RULES[exercise.suggestedWeightKg == null ? "first-time" : "skip-hold"].name,
+          : `Stesso carico — ${formatKg(exercise.suggestedWeightKg)} dall'ultima volta che l'hai fatto`,
+      ruleName: PROGRESSION_RULES[exercise.suggestedWeightKg == null ? "first-time" : "carry-over"].name,
       nextStepHint:
         exercise.suggestedWeightKg == null
           ? `Scegli un peso che ti lasci due ripetizioni di margine: da ${exercise.sets}×${exercise.repsMax} in poi il carico te lo propongo io.`

@@ -48,7 +48,15 @@ export function SessionHeader({
 
   return (
     <header className="sticky top-0 z-[var(--z-sticky)] border-b border-[var(--border)] bg-[var(--card)]">
-      <div className="app-container flex min-h-[72px] items-center gap-3 py-3">
+      {/*
+        Sotto i 320px CSS — cioe' un telefono a 375 con lo zoom al 200% — i due tasti
+        da 48, il titolo e `TERMINA` non stanno su una riga sola: la riga sborda e
+        compare lo scroll orizzontale (QA, secondo audit, DIFETTO 6). Invece di
+        stringere i bersagli sotto i 44px, la riga **va a capo** e `TERMINA` prende
+        tutta la larghezza: e' il riflusso che WCAG 1.4.10 chiede, applicato anche
+        sotto la soglia che obbliga a farlo.
+      */}
+      <div className="app-container flex min-h-[72px] flex-wrap items-center gap-3 py-3 max-[319px]:justify-center">
         <button
           type="button"
           onClick={onMinimize}
@@ -109,7 +117,7 @@ export function SessionHeader({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button onClick={onFinish} className="shrink-0 px-4">
+        <Button onClick={onFinish} className="shrink-0 px-4 max-[319px]:w-full">
           TERMINA
         </Button>
       </div>

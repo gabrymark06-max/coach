@@ -28,6 +28,7 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { announce } from "@/lib/announce";
+import { describeError, logError } from "@/lib/errors";
 import { getDb } from "@/lib/db/db";
 import { personalRecordsForSession } from "@/lib/db/pr-ops";
 import { getSession } from "@/lib/db/queries";
@@ -125,8 +126,16 @@ export function TrainerView() {
       await fn();
       announce("system", messaggio);
       toast.success(messaggio);
-    } catch {
-      toast.error("Non riesco a scrivere su questo dispositivo.");
+    } catch (error) {
+      /*
+        L'errore si dice e si registra. Un `catch` muto e' costato al QA un dump di
+        IndexedDB per trovare un `TypeError`, e all'utente la convinzione che il suo
+        telefono fosse rotto.
+      */
+      logError("trainer/azione", error);
+      const detto = describeError(error);
+      announce("system", detto);
+      toast.error(detto);
     } finally {
       setBusy(false);
     }

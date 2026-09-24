@@ -290,6 +290,42 @@ test("la catena Invio va da KG a REPS al check", async ({ page }) => {
   await page.getByRole("button", { name: "Scarta", exact: true }).click();
 });
 
+/**
+ * DIFETTO 2 del secondo audit: con la colonna RPE accesa la catena entrava nell'RPE e
+ * non ne usciva piu'. Chi accende l'RPE e' chi usa l'app sul serio, e perdeva
+ * l'unico shortcut del sistema a meta' serie.
+ */
+test("la catena Invio attraversa l'RPE quando la colonna e' accesa", async ({ page }) => {
+  await preparaApp(page);
+  await creaRoutineConEsercizio(page, "Push RPE");
+  await page.getByRole("button", { name: "AVVIA", exact: true }).click();
+
+  await page.getByRole("button", { name: "Altre azioni della sessione" }).click();
+  await page.getByRole("menuitem", { name: /colonna RPE/ }).click();
+
+  await page.getByLabel(/Peso in chili, serie 1,/).first().focus();
+  await page.keyboard.type("80");
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel(/Ripetizioni, serie 1,/).first()).toBeFocused();
+
+  await page.keyboard.type("8");
+  await page.keyboard.press("Enter");
+  const rpe = page.getByLabel(/RPE da 1 a 10, serie 1,/).first();
+  await expect(rpe).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  const check = page.getByRole("checkbox", { name: /Completa serie 1/ }).first();
+  await expect(check).toBeFocused();
+
+  // e il check si preme da tastiera: la serie si completa senza toccare il mouse
+  await page.keyboard.press("Enter");
+  await expect(check).toHaveAttribute("aria-checked", "true");
+
+  await page.getByRole("button", { name: "Altre azioni della sessione" }).click();
+  await page.getByRole("menuitem", { name: /Scarta/ }).click();
+  await page.getByRole("button", { name: "Scarta", exact: true }).click();
+});
+
 /** L'id della cella che ha il fuoco adesso. */
 async function attivo(page: Page): Promise<string> {
   return page.evaluate(() => document.activeElement?.id ?? "");
