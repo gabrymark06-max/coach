@@ -27,6 +27,8 @@ const CATALOGO: Exercise[] = LIBRARY.map((row) => ({
 const PROFILO: TrainerProfile = {
   id: "singleton",
   goal: "hypertrophy",
+  gender: "man",
+  environment: "gym",
   priorityMuscles: [],
   equipment: ["barbell", "dumbbell", "cable", "machine", "bodyweight"],
   level: "intermediate",

@@ -23,6 +23,12 @@ import type { ID, ISODate, Equipment, MuscleGroup } from "./schema";
 export type TrainerGoal = "strength" | "hypertrophy" | "recomp" | "maintenance";
 export type TrainerLevel = "beginner" | "intermediate" | "advanced";
 
+/** Gendere dell'utente: modifica la prescrizione a seconda di genero. */
+export type TrainerGender = "woman" | "man" | "unknown";
+
+/** Ambiente di allenamento: decide quali attrezzi e movimenti sono disponibili. */
+export type TrainerEnvironment = "gym" | "free-body" | "gym-plus-cardio";
+
 export type ProgressionRule =
   | "double-progression"
   | "reps-first"
@@ -44,8 +50,12 @@ export type ProgressionRule =
 export interface TrainerProfile {
   id: "singleton";
   goal: TrainerGoal;
+  /** genero: modifica volume, intensita' e RPE in base a genero. */
+  gender: TrainerGender;
   /** massimo 2, puo' essere vuoto */
   priorityMuscles: MuscleGroup[];
+  /** ambiente di allenamento: decide quali attrezzi e movimenti sono disponibili. */
+  environment: TrainerEnvironment;
   /** almeno uno */
   equipment: Equipment[];
   level: TrainerLevel;

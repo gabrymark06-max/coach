@@ -51,6 +51,8 @@ function profilo(patch: Partial<TrainerProfile> = {}): TrainerProfile {
   return {
     id: "singleton",
     goal: "hypertrophy",
+    gender: "man",
+    environment: "gym",
     priorityMuscles: [],
     equipment: PALESTRA,
     level: "intermediate",

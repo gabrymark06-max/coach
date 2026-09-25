@@ -1,4 +1,10 @@
-import type { TrainerGoal, TrainerLevel } from "@/lib/db/trainer-schema";
+import type {
+  TrainerGoal,
+  TrainerLevel,
+  TrainerGender,
+  TrainerEnvironment,
+} from "@/lib/db/trainer-schema";
+import type { MuscleGroup } from "@/lib/db/schema";
 
 /**
  * Quante serie, quante ripetizioni, a che RPE e con quanto recupero.
@@ -71,13 +77,50 @@ const LEVEL_RPE: Record<TrainerLevel, number> = {
 export function prescribe(
   goal: TrainerGoal,
   role: Role,
+  muscleGroup: MuscleGroup,
   level: TrainerLevel,
+  gender: TrainerGender = "unknown",
+  environment: TrainerEnvironment = "gym",
+  priorityMuscles: readonly MuscleGroup[] = [],
 ): Prescription {
   const base = BASE[goal][role];
+  const levelSets = LEVEL_SETS[level][role];
+  const levelRpe = LEVEL_RPE[level];
+  const isPriority = priorityMuscles.includes(muscleGroup);
+
+  /*
+    Correzione per genero: le donne possono ottenere risultati simili con volume
+    leggermente maggiore (+1 serie per ruoli fondamentali) senza usare più carico.
+    */
+  const genderSets = gender === "woman" ? 1 : 0;
+
+  /*
+    Correzione per ambiente. Free-body: nessun carico esterno, intensione più bassa,
+    recupero più breve. Gym e gym-plus-cardio: standard.
+  */
+  const envSets = environment === "free-body" ? -1 : 0;
+  const envRpe = environment === "free-body" ? 0.5 : 0;
+  const envRest = environment === "free-body" ? -10 : 0;
+
+  /*
+    Correzione per muscoli di concentrazione. Muscoli privilegiati ricevono volume e
+    intensita' leggermente maggiori per una stimolazione equilibrata.
+  */
+  const muscleSets = isPriority
+    ? (role === "primario" ? 0.5 : role === "secondario" ? 0.3 : 0.2)
+    : 0;
+  const muscleRpe = isPriority ? 0.3 : 0;
+
+  const adjustedSets = Math.max(2, base.sets + levelSets + genderSets + envSets + muscleSets);
+  const adjustedRpe = clampRpe(base.rpeTarget + levelRpe + envRpe + muscleRpe);
+
   return {
     ...base,
-    sets: Math.max(2, base.sets + LEVEL_SETS[level][role]),
-    rpeTarget: clampRpe(base.rpeTarget + LEVEL_RPE[level]),
+    sets: adjustedSets,
+    repsMin: base.repsMin,
+    repsMax: base.repsMax,
+    rpeTarget: adjustedRpe,
+    restSec: Math.max(30, base.restSec + envRest),
   };
 }
 

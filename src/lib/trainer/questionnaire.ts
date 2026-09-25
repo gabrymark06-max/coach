@@ -4,7 +4,7 @@ import {
   type Equipment,
   type MuscleGroup,
 } from "@/lib/db/schema";
-import type { TrainerGoal, TrainerLevel, TrainerProfile } from "@/lib/db/trainer-schema";
+import type { TrainerGoal, TrainerLevel, TrainerGender, TrainerEnvironment, TrainerProfile } from "@/lib/db/trainer-schema";
 import type { DaysPerWeek } from "./splits";
 
 /**
@@ -18,8 +18,22 @@ import type { DaysPerWeek } from "./splits";
  * compare l'errore sotto la domanda. Un pulsante spento non dice mai perche' lo e'.
  */
 
-export const TOTAL_STEPS = 6;
-export type Step = 1 | 2 | 3 | 4 | 5 | 6;
+export const TOTAL_STEPS = 8;
+export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+/** Gendere: modifica la prescrizione in base a genero (NSCA/ACSM). */
+export const GENDERS: { value: TrainerGender; title: string; line: string }[] = [
+  { value: "woman", title: "Donna", line: "Volume leggermente lower, RPE equilibrato. Più serie o ripetizioni, ma a carico inferiore." },
+  { value: "man", title: "Uomo", line: "Volume più alto, carichi più pesanti. Volume e intensita' più liberi." },
+  { value: "unknown", title: "Sconosciuto", line: "Si presume valori medici. Se possibile, indicare il genero per una prescrizione personalizzata." },
+];
+
+/** Ambiente di allenamento: decide quali attrezzi e movimenti sono disponibili. */
+export const ENVIRONMENTS: { value: TrainerEnvironment; title: string; line: string }[] = [
+  { value: "gym", title: "Palestra completa", line: "Bilanciere, manubri, cavi, macchine. Tutti gli attrezzi disponibili." },
+  { value: "free-body", title: "Corpo libero", line: "Solo il tuo peso. Esercizi a corpo libero senza carichi esterni." },
+  { value: "gym-plus-cardio", title: "Palestra + cardio", line: "Palestra con carichi esterni, aggiunta cardio (corse, bici, etc.)." },
+];
 
 export const GOALS: { value: TrainerGoal; title: string; line: string }[] = [
   {
@@ -154,7 +168,9 @@ export const DEFAULT_MINUTES: 45 | 60 | 75 | 90 = 60;
 export type Draft = Partial<Omit<TrainerProfile, "id">>;
 
 export const EMPTY_DRAFT: Draft = {
+  gender: "unknown",
   priorityMuscles: [],
+  environment: "gym",
   equipment: [],
   daysPerWeek: 3,
   sessionMinutes: 60,
@@ -169,20 +185,26 @@ export interface StepMeta {
 }
 
 export const STEPS: StepMeta[] = [
-  { step: 1, question: "Qual è il tuo obiettivo?", hint: "Decide serie, ripetizioni e recuperi." },
+  { step: 1, question: "Qual è il tuo obiettivo?", hint: "Forza, Ipertrofia, Ricomposizione, Mantenimento — decide serie, ripetizioni e recuperi." },
   {
     step: 2,
-    question: "Quali muscoli vuoi privilegiare?",
-    hint: "Al massimo due. Puoi anche non sceglierne nessuno.",
+    question: "Che genero sei?",
+    hint: "Modifica volume, intensita' e RPE in base al genero. Scegli il genero più corretto.",
   },
   {
     step: 3,
-    question: "Che attrezzatura hai?",
-    hint: "Parti da un preset e correggi quello che serve.",
+    question: "In quali ambiente ti alleni?",
+    hint: "Palestra completa, corpo libero, o palestra + cardio. La scelta decide gli attrezzi e i movimenti possibili.",
   },
-  { step: 4, question: "Da quanto ti alleni?", hint: "Ogni scelta cambia volume e progressione." },
-  { step: 5, question: "Quanti giorni a settimana?", hint: "Il numero di giorni decide lo split." },
-  { step: 6, question: "Ecco cosa ho capito", hint: null },
+  {
+    step: 4,
+    question: "Quali muscoli vuoi privilegiare?",
+    hint: "Al massimo due. Puoi anche non sceglierne nessuno. Affinano l'enorme volume di ogni settimana.",
+  },
+  { step: 5, question: "Che attrezzatura hai?", hint: "Parti da un preset e correggi quello che serve. Almeno uno è richiesto." },
+  { step: 6, question: "Da quanto ti alleni?", hint: "Ogni scelta cambia volume e progressione." },
+  { step: 7, question: "Quanti giorni a settimana?", hint: "Il numero di giorni decide lo split della settimana." },
+  { step: 8, question: "Ecco cosa hai capito", hint: null },
 ];
 
 export interface StepError {
@@ -197,33 +219,58 @@ export function validateStep(step: Step, draft: Draft): StepError | null {
     case 1:
       return draft.goal ? null : { message: "Scegli un obiettivo per continuare." };
     case 2:
+      if (!draft.gender) {
+        return { message: "Scegli un genero valido." };
+      }
+      if (!GENDERS.some((g) => g.value === draft.gender)) {
+        return { message: "Scegli un genero valido." };
+      }
+      return null;
+    case 3:
+      if (!draft.environment) {
+        return { message: "Scegli un ambiente di allenamento valido." };
+      }
+      if (!ENVIRONMENTS.some((e) => e.value === draft.environment)) {
+        return { message: "Scegli un ambiente di allenamento valido." };
+      }
+      return null;
+    case 4:
       return (draft.priorityMuscles?.length ?? 0) > MAX_PRIORITY_MUSCLES
         ? { message: `Puoi scegliere al massimo ${MAX_PRIORITY_MUSCLES} muscoli.` }
         : null;
-    case 3:
+    case 5:
       return (draft.equipment?.length ?? 0) > 0
         ? null
         : {
             message: "Senza attrezzi posso generare solo esercizi a corpo libero.",
             escape: { label: "Va bene, corpo libero", patch: { equipment: ["bodyweight"] } },
           };
-    case 4:
+    case 6:
       return draft.level ? null : { message: "Scegli da quanto ti alleni per continuare." };
-    case 5:
+    case 7:
       return draft.daysPerWeek && draft.sessionMinutes
         ? null
         : { message: "Scegli quanti giorni a settimana e quanto dura una seduta." };
-    case 6:
-      return null;
+    case 8:
+      return !draft.goal
+        && !draft.gender
+        && !draft.environment
+        && !draft.priorityMuscles
+        && !draft.equipment
+        && !draft.level
+        && !draft.daysPerWeek
+        && !draft.sessionMinutes
+        ? { message: "Hai ancora risposte da completare." }
+        : null;
   }
 }
 
 /** Il primo passo ancora senza risposta: dove riprende una bozza. */
 export function firstIncompleteStep(draft: Draft): Step {
-  for (const step of [1, 2, 3, 4, 5] as Step[]) {
+  for (const step of [1, 2, 3, 4, 5, 6, 7] as Step[]) {
     if (validateStep(step, draft)) return step;
   }
-  return 6;
+  return 8;
 }
 
 /** Il profilo completo, se la bozza lo è. `null` finché manca una risposta. */
@@ -238,7 +285,9 @@ export function draftProfile(draft: Draft): TrainerProfile | null {
   return {
     id: "singleton",
     goal: draft.goal,
+    gender: draft.gender ?? "unknown",
     priorityMuscles: (draft.priorityMuscles ?? []).slice(0, MAX_PRIORITY_MUSCLES),
+    environment: draft.environment ?? "gym",
     equipment: draft.equipment ?? [],
     level: draft.level,
     daysPerWeek: draft.daysPerWeek ?? DEFAULT_DAYS,
@@ -249,10 +298,12 @@ export function draftProfile(draft: Draft): TrainerProfile | null {
 export function toProfile(draft: Draft): TrainerProfile | null {
   if (!draft.goal || !draft.level || !draft.daysPerWeek || !draft.sessionMinutes) return null;
   if ((draft.equipment?.length ?? 0) === 0) return null;
-  return {
-    id: "singleton",
-    goal: draft.goal,
-    priorityMuscles: (draft.priorityMuscles ?? []).slice(0, MAX_PRIORITY_MUSCLES),
+    return {
+      id: "singleton",
+      goal: draft.goal,
+      gender: draft.gender ?? "unknown",
+      priorityMuscles: (draft.priorityMuscles ?? []).slice(0, MAX_PRIORITY_MUSCLES),
+      environment: draft.environment ?? "gym",
     equipment: draft.equipment ?? [],
     level: draft.level,
     daysPerWeek: draft.daysPerWeek,
@@ -279,6 +330,16 @@ export function summaryRows(
     },
     {
       step: 2,
+      label: "Genero",
+      value: GENDERS.find((g) => g.value === draft.gender)?.title ?? "—",
+    },
+    {
+      step: 3,
+      label: "Ambiente di allenamento",
+      value: ENVIRONMENTS.find((e) => e.value === draft.environment)?.title ?? "—",
+    },
+    {
+      step: 4,
       label: "Muscoli privilegiati",
       value:
         (draft.priorityMuscles ?? []).length === 0
@@ -286,17 +347,17 @@ export function summaryRows(
           : (draft.priorityMuscles ?? []).map((item) => MUSCLE_GROUP_LABEL[item]).join(", "),
     },
     {
-      step: 3,
+      step: 5,
       label: "Attrezzatura",
       value: describeEquipment(draft.equipment ?? []),
     },
     {
-      step: 4,
+      step: 6,
       label: "Livello",
       value: LEVELS.find((level) => level.value === draft.level)?.title ?? "—",
     },
     {
-      step: 5,
+      step: 7,
       label: "Settimana",
       value:
         draft.daysPerWeek && draft.sessionMinutes && draft.level

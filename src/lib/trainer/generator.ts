@@ -211,7 +211,15 @@ export function generateProgram(input: GenerateInput): GenerateResult {
 
     const days: TrainerDay[] = dayPlans.map((plan, dayIndex) => {
       const exercises: TrainerExercise[] = plan.picks.map((pick, order) => {
-        const base = prescribe(profile.goal, pick.role, profile.level);
+        const base = prescribe(
+          profile.goal,
+          pick.role,
+          PATTERN_MUSCLE[pick.pattern],
+          profile.level,
+          profile.gender,
+          profile.environment,
+          profile.priorityMuscles,
+        );
         const prescription = isDeload ? deloadPrescription(base) : base;
         const known = weekIndex === 1 ? history.get(pick.exercise.id) : undefined;
         return {
